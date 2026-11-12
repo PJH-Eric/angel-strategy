@@ -1,0 +1,13 @@
+{
+  "name": "angel-strategy",
+  "version": "0.1.0",
+  "description": "天使的策略 — 地下設施風數字心理戰（推理、算式、數字博弈）",
+  "private": true,
+  "type": "commonjs",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/rules.test.js",
+    "verify": "node tests/rules.test.js"
+  }
+}
