@@ -4,10 +4,16 @@
   "description": "天使的策略 — 地下設施風數字心理戰（推理、算式、數字博弈）",
   "private": true,
   "type": "commonjs",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/rules.test.js",
-    "verify": "node tests/rules.test.js"
+    "test": "node tests/rules.test.js && node tests/hub.test.js",
+    "verify": "node tests/rules.test.js && node tests/hub.test.js"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "ws": "^8.22.2"
   }
 }
