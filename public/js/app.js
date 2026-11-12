@@ -337,6 +337,7 @@
         S.widget.lockHint(h.pos, h.digit);
       } else {
         S.hintMsgs.push(R.hintPuzzle(pz, S.ph, I18N.lang));
+        if (S.widget.applyHint) S.widget.applyHint(S.ph);
       }
       S.hints++; S.ph++; Audio2.sfx('ok');
       drawHintBox(); drawHud(); drawActions();

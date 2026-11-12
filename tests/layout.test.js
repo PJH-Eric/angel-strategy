@@ -39,6 +39,8 @@ const CHECK = function () {
     const tag = el.tagName;
     if (tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'INPUT' && /^(checkbox|radio|range|number|date|file|color)$/.test(el.type))) out.push('原生控制項：' + tag + (el.type ? '[' + el.type + ']' : ''));
     if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1 && !el.classList.contains('sa-view') && cs.scrollbarWidth !== 'none') out.push('原生捲軸：' + el.tagName + '.' + String(el.className).slice(0, 30));
+    if ((tag === 'BUTTON' || tag === 'A') && !el.textContent.trim() && !el.getAttribute('aria-label') && !el.closest('[aria-hidden="true"]')) out.push('按鈕沒有可讀名稱：' + tag + '.' + String(el.className).slice(0, 30));
+    if ((tag === 'BUTTON' || tag === 'A') && r.width < 32 && r.height < 32 && !el.closest('svg')) out.push('按鈕太小（' + Math.round(r.width) + '×' + Math.round(r.height) + '）：' + String(el.className).slice(0, 30));
     if (el.classList.contains('overlay') || el.classList.contains('dialog')) { if (r.bottom > vh + 1 && !clipped(el)) out.push('對話框超出高度'); }
   });
   return out;

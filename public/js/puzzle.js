@@ -277,6 +277,8 @@
     draw();
     return { cluesEl: cluesEl, entryEl: entryEl, state: st,
       bad: function () { slots.forEach(function (b) { b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad'); }); },
+      // 提示直接幫你填上那個圖形的重量（原本佔用該重量的圖形會清空）
+      applyHint: function (n) { const i = Math.min(n, puzzle.m - 1), w = puzzle.solution && puzzle.solution[i]; if (w == null) return; const at = st.assign.indexOf(w); if (at !== -1) st.assign[at] = null; st.assign[i] = w; draw(); },
       destroy: function () {} };
   }
 
@@ -315,6 +317,7 @@
     draw();
     return { cluesEl: cluesEl, entryEl: entryEl, state: st,
       bad: function () { fig.classList.remove('bad'); void fig.offsetWidth; fig.classList.add('bad'); },
+      applyHint: function (n) { const l = Math.min(n, puzzle.n - 2); if (puzzle.solution) { st.ops[l] = puzzle.solution[l]; draw(); } },
       destroy: function () {} };
   }
 
