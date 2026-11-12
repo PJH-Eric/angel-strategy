@@ -284,7 +284,7 @@
     const rowsEl = el('div', { class: 'stack' });
     const btns = [];
     for (let l = 0; l < puzzle.n - 1; l++) (function (l) {
-      const row = el('div', { class: 'row', style: 'justify-content:center;align-items:center' }, [el('span', { class: 'label', style: 'min-width:4.5em', text: t('play.level', { n: l + 1 }) })]);
+      const row = el('div', { class: 'row', style: 'justify-content:center;align-items:center' }, [el('span', { class: 'label', style: 'min-width:4.5em', text: t('play.pyrLevel', { n: l + 1 }) })]);
       const group = [];
       puzzle.ops.forEach(function (o) {
         const b = UI.button(glyph[o], { cls: 'num', onClick: function () { st.ops[l] = o; Audio2.sfx('key'); draw(); } });
