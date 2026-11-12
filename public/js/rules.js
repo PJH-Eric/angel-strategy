@@ -273,7 +273,7 @@
   function explainArith(puzzle) {
     const r = parseArith(puzzle.solution);
     return {
-      expression: puzzle.solution.replace(/\*/g, '×').replace(/\//g, '÷') + ' = ' + puzzle.target,
+      expression: puzzle.solution.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−') + ' = ' + puzzle.target,
       steps: r.steps
     };
   }

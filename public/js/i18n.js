@@ -1,0 +1,134 @@
+/* 介面字串：繁體中文（預設）與 English。玩家聊天內容不翻譯。 */
+(function () {
+  'use strict';
+  const D = {
+    'zh-TW': {
+      'app.name': '天使的策略', 'app.tag': '地下設施 ・ 數字心理戰',
+      'home.campaign': '單機闖關', 'home.daily': '每日挑戰', 'home.online': '線上對戰', 'home.how': '怎麼玩',
+      'home.foot': '推理 ・ 算式 ・ 博弈　—　每一題都附解法',
+      'common.back': '返回', 'common.close': '關閉', 'common.ok': '確定', 'common.cancel': '取消', 'common.home': '回到首頁',
+      'common.again': '再來一局', 'common.next': '下一關', 'common.retry': '重試', 'common.room': '回到房間', 'common.copy': '複製', 'common.copied': '已複製',
+      'common.levelList': '回到選關', 'common.language': '語言', 'common.settings': '設定',
+      'diff.baby': '幼幼', 'diff.easy': '簡單', 'diff.normal': '普通', 'diff.hard': '困難', 'diff.myth': '神話',
+      'camp.title': '單機闖關', 'camp.sub': '五段難度，各 50 關；通過上一關才解鎖下一關',
+      'camp.level': '第 {n} 關', 'camp.boss': '魔王關', 'camp.locked': '尚未解鎖',
+      'play.time': '時間', 'play.hints': '提示', 'play.level': '關卡', 'play.step': '題目', 'play.tries': '嘗試',
+      'play.hint': '提示', 'play.hintNone': '此難度不提供提示', 'play.hintLeft': '剩 {n} 次', 'play.hintInf': '不限',
+      'play.giveup': '看解法', 'play.submit': '送出', 'play.back': '退格', 'play.clear': '清除', 'play.exit': '離開',
+      'play.clues': '線索', 'play.cluesHelp': '找出符合全部線索的唯一密碼，數字不會重複。',
+      'play.arithHelp': '用全部數字各一次，加減乘除與括號湊出目標。', 'play.target': '目標',
+      'play.wrong': '不對，再想想', 'play.right': '正確！',
+      'play.err.syntax': '算式格式不正確', 'play.err.numbers': '必須恰好用到全部數字各一次', 'play.err.value': '結果不等於目標',
+      'play.leaveAsk': '離開這一關？目前進度不會保留。',
+      'res.clear': '過關', 'res.fail': '失敗', 'res.timeup': '時間到', 'res.gaveup': '已放棄', 'res.time': '用時 {s} 秒', 'res.hintsUsed': '提示 {n} 次',
+      'res.solution': '解法', 'res.answer': '答案', 'res.steps': '逐步運算', 'res.cluesWalk': '逐條線索縮小範圍', 'res.remain': '剩 {n} 種可能',
+      'res.theAnswer': '唯一答案', 'res.puzzleN': '第 {n} 題',
+      'daily.title': '每日挑戰', 'daily.sub': '以台北時間切日；全球玩家同一天同題', 'daily.today': '今日 {d}', 'daily.start': '開始', 'daily.best': '最佳 {s} 秒',
+      'daily.done': '今日已完成', 'daily.total': '總用時',
+      'set.title': '設定', 'set.bgm': '背景音樂', 'set.sfx': '音效', 'set.bgmVol': '音樂音量', 'set.sfxVol': '音效音量', 'set.vibrate': '震動回饋', 'set.reduce': '減少動態',
+      'set.reset': '恢復預設', 'set.lobbyChat': '大廳聊天室', 'set.contrast': '色彩輔助', 'set.name': '暱稱',
+      'how.title': '怎麼玩',
+      'how.1': '單機：只有單人解題，沒有電腦對手。推理題給你一串線索，找出唯一的密碼；算式題用所有數字各一次湊出目標。',
+      'how.2': '五段難度：幼幼不限時間也不限提示；越往神話，時限越短、提示越少。每 10 關有一場魔王關，連解三題。',
+      'how.3': '線上：2～6 位真人。回合輪流出現「數字博弈」「推理搶答」「算式搶答」，名次換成分數。',
+      'how.4': '數字博弈：所有人同時秘密出數字，依本回合的規則（均數、最小不重複、最大不重複）決定名次。',
+      'how.5': '每一題結束後都會顯示完整解法，輸了也能學到怎麼算。',
+      'on.title': '線上大廳', 'on.name': '你的暱稱', 'on.create': '開新房間', 'on.quick': '快速加入', 'on.rooms': '公開房間', 'on.none': '目前沒有房間，開一間吧',
+      'on.connecting': '連線中…（免費主機冷啟動可能需要約一分鐘）', 'on.offline': '無法連線到伺服器', 'on.noServer': '尚未設定伺服器網址（GAME_SERVER_URL）', 'on.retry': '重新連線',
+      'on.join': '加入', 'on.watch': '觀戰', 'on.full': '已滿', 'on.playing': '對局中', 'on.waiting': '等待中', 'on.players': '{n}/{m} 人', 'on.spec': '{n} 位觀戰',
+      'on.inviteTitle': '收到房間邀請', 'on.inviteName': '確認你的暱稱後加入', 'on.inviteBad': '邀請連結無效、已過期或已撤銷', 'on.roomClosed': '房間已結束',
+      'room.title': '房間', 'room.host': '房主', 'room.you': '你', 'room.spectators': '觀戰席', 'room.format': '賽制', 'room.rounds': '回合數', 'room.timer': '每回合秒數',
+      'room.fmt.chips': '籌碼生存', 'room.fmt.elimination': '逐關淘汰', 'room.fmt.points': '固定積分',
+      'room.fmtHelp.chips': '每人 {c} 籌碼；名次得分減 1 即為籌碼增減，歸零出局，最後存活者勝。',
+      'room.fmtHelp.elimination': '每回合淘汰得分最低的人（同分不淘汰），直到剩下一人。',
+      'room.fmtHelp.points': '打滿所有回合，總分最高者勝，沒有人被提早淘汰。',
+      'room.start': '開始對局', 'room.needTwo': '至少需要 2 位真人才能開始', 'room.leave': '離開房間', 'room.invite': '邀請連結', 'room.revoke': '撤銷並重發', 'room.kick': '請出',
+      'room.joinPlay': '加入遊戲', 'room.toSpectate': '改為觀戰', 'room.hostLeaveNote': '房主離開時會自動換人',
+      'm.round': '第 {a}/{b} 回合', 'm.score': '分數', 'm.chips': '籌碼', 'm.out': '出局', 'm.alive': '存活', 'm.spectating': '你正在觀戰', 'm.eliminated': '你已出局，改為觀戰',
+      'm.k.num': '數字博弈', 'm.k.deduce': '推理搶答', 'm.k.arith': '算式搶答',
+      'm.num.avg': '平均數 × {f} 的目標，最接近者勝。從 0～100 選一個數字。',
+      'm.num.lowunique': '選 1～{max}：只有一人選的數字才算數，其中最小者勝。',
+      'm.num.highunique': '選 1～{max}：只有一人選的數字才算數，其中最大者勝。',
+      'm.pick': '送出數字', 'm.picked': '已送出，等待其他人…', 'm.solved': '答對！等待其他人…', 'm.timeLeft': '剩 {s} 秒', 'm.nextIn': '{s} 秒後下一回合',
+      'm.roundEnd': '本回合結果', 'm.revealed': '公開', 'm.noPick': '未出', 'm.pts': '+{n} 分', 'm.winner': '勝者', 'm.void': '本回合作廢',
+      'm.final': '最終名次', 'm.champion': '優勝', 'm.discon': '斷線', 'm.sol.title': '本回合解法',
+      'chat.title': '大廳', 'chat.title.n': '大廳 {n} 人', 'chat.ph': '說點什麼…', 'chat.send': '送出', 'chat.quick': '快捷', 'chat.new': '↓ {n} 則新訊息', 'chat.connecting': '連線中…', 'chat.me': '（我）',
+      'chat.q1': '嗨～', 'chat.q2': '來一局！', 'chat.q3': '缺一人！', 'chat.q4': '快進房～', 'chat.q5': '等我一下', 'chat.q6': '謝謝', 'chat.q7': '拜拜',
+      'chat.sys.room': '{n} 開了新房間（{r}）', 'chat.rename': '改暱稱', 'room.chat': '房間聊天',
+      'err.generic': '發生錯誤，請稍後再試', 'err.roomFull': '房間已滿', 'err.notHost': '只有房主可以操作', 'err.started': '對局已開始', 'err.closed': '房間已關閉'
+    },
+    'en': {
+      'app.name': 'Angel Strategy', 'app.tag': 'UNDERGROUND FACILITY · NUMBER MIND GAMES',
+      'home.campaign': 'Campaign', 'home.daily': 'Daily Challenge', 'home.online': 'Online Match', 'home.how': 'How to Play',
+      'home.foot': 'Deduction · Arithmetic · Game Theory — every puzzle comes with a solution',
+      'common.back': 'Back', 'common.close': 'Close', 'common.ok': 'OK', 'common.cancel': 'Cancel', 'common.home': 'Home',
+      'common.again': 'Play Again', 'common.next': 'Next Level', 'common.retry': 'Retry', 'common.room': 'Back to Room', 'common.copy': 'Copy', 'common.copied': 'Copied',
+      'common.levelList': 'Level Select', 'common.language': 'Language', 'common.settings': 'Settings',
+      'diff.baby': 'Rookie', 'diff.easy': 'Easy', 'diff.normal': 'Normal', 'diff.hard': 'Hard', 'diff.myth': 'Mythic',
+      'camp.title': 'Campaign', 'camp.sub': 'Five difficulties, 50 levels each; clear a level to unlock the next',
+      'camp.level': 'Level {n}', 'camp.boss': 'Boss', 'camp.locked': 'Locked',
+      'play.time': 'TIME', 'play.hints': 'HINTS', 'play.level': 'LEVEL', 'play.step': 'PUZZLE', 'play.tries': 'TRIES',
+      'play.hint': 'Hint', 'play.hintNone': 'No hints on this difficulty', 'play.hintLeft': '{n} left', 'play.hintInf': 'Unlimited',
+      'play.giveup': 'Show Solution', 'play.submit': 'Submit', 'play.back': 'Back', 'play.clear': 'Clear', 'play.exit': 'Exit',
+      'play.clues': 'CLUES', 'play.cluesHelp': 'Find the single code that fits every clue. Digits never repeat.',
+      'play.arithHelp': 'Use every number exactly once with + − × ÷ and parentheses to reach the target.', 'play.target': 'TARGET',
+      'play.wrong': 'Not quite — keep thinking', 'play.right': 'Correct!',
+      'play.err.syntax': 'Invalid expression', 'play.err.numbers': 'Use every given number exactly once', 'play.err.value': 'The result is not the target',
+      'play.leaveAsk': 'Leave this level? Progress will be lost.',
+      'res.clear': 'CLEARED', 'res.fail': 'FAILED', 'res.timeup': "TIME'S UP", 'res.gaveup': 'GAVE UP', 'res.time': '{s}s used', 'res.hintsUsed': '{n} hints used',
+      'res.solution': 'Solution', 'res.answer': 'Answer', 'res.steps': 'Step by step', 'res.cluesWalk': 'Narrowing down clue by clue', 'res.remain': '{n} possibilities left',
+      'res.theAnswer': 'The only answer', 'res.puzzleN': 'Puzzle {n}',
+      'daily.title': 'Daily Challenge', 'daily.sub': 'Resets at midnight Taipei time; same puzzles for everyone', 'daily.today': 'Today {d}', 'daily.start': 'Start', 'daily.best': 'Best {s}s',
+      'daily.done': 'Completed today', 'daily.total': 'Total time',
+      'set.title': 'Settings', 'set.bgm': 'Music', 'set.sfx': 'Sound effects', 'set.bgmVol': 'Music volume', 'set.sfxVol': 'SFX volume', 'set.vibrate': 'Vibration', 'set.reduce': 'Reduce motion',
+      'set.reset': 'Reset defaults', 'set.lobbyChat': 'Lobby chat', 'set.contrast': 'Color assist', 'set.name': 'Nickname',
+      'how.title': 'How to Play',
+      'how.1': 'Solo: single-player puzzles only, no computer opponents. Deduction puzzles give clues to find the one code; arithmetic puzzles reach a target using every number once.',
+      'how.2': 'Five difficulties: Rookie has no time limit and unlimited hints; higher tiers shrink time and hints. Every 10th level is a boss: three puzzles in a row.',
+      'how.3': 'Online: 2–6 real players. Rounds rotate between Number Game, Deduction Race and Arithmetic Race; ranks turn into points.',
+      'how.4': 'Number Game: everyone secretly picks a number; the round rule (average, lowest unique, highest unique) decides the ranking.',
+      'how.5': 'After every puzzle you get the full solution, so a loss still teaches you how.',
+      'on.title': 'Online Lobby', 'on.name': 'Your nickname', 'on.create': 'New Room', 'on.quick': 'Quick Join', 'on.rooms': 'Public rooms', 'on.none': 'No rooms yet — open one!',
+      'on.connecting': 'Connecting… (free hosting may take about a minute to wake up)', 'on.offline': 'Cannot reach the server', 'on.noServer': 'Server URL (GAME_SERVER_URL) is not configured', 'on.retry': 'Reconnect',
+      'on.join': 'Join', 'on.watch': 'Watch', 'on.full': 'Full', 'on.playing': 'In match', 'on.waiting': 'Waiting', 'on.players': '{n}/{m}', 'on.spec': '{n} watching',
+      'on.inviteTitle': 'Room invitation', 'on.inviteName': 'Confirm your nickname to join', 'on.inviteBad': 'This invite is invalid, expired or revoked', 'on.roomClosed': 'This room has ended',
+      'room.title': 'Room', 'room.host': 'Host', 'room.you': 'You', 'room.spectators': 'Spectators', 'room.format': 'Format', 'room.rounds': 'Rounds', 'room.timer': 'Seconds per round',
+      'room.fmt.chips': 'Chip Survival', 'room.fmt.elimination': 'Elimination', 'room.fmt.points': 'Fixed Points',
+      'room.fmtHelp.chips': 'Everyone starts with {c} chips; (round points − 1) is added to chips; reach 0 and you are out. Last one standing wins.',
+      'room.fmtHelp.elimination': 'Each round the lowest scorer is eliminated (ties spare everyone) until one remains.',
+      'room.fmtHelp.points': 'Play all rounds; highest total wins. Nobody is eliminated early.',
+      'room.start': 'Start Match', 'room.needTwo': 'At least 2 real players are needed', 'room.leave': 'Leave Room', 'room.invite': 'Invite link', 'room.revoke': 'Revoke & reissue', 'room.kick': 'Kick',
+      'room.joinPlay': 'Join as player', 'room.toSpectate': 'Spectate', 'room.hostLeaveNote': 'Host passes to another player when they leave',
+      'm.round': 'Round {a}/{b}', 'm.score': 'Score', 'm.chips': 'Chips', 'm.out': 'Out', 'm.alive': 'Alive', 'm.spectating': 'You are spectating', 'm.eliminated': 'You are out — now spectating',
+      'm.k.num': 'Number Game', 'm.k.deduce': 'Deduction Race', 'm.k.arith': 'Arithmetic Race',
+      'm.num.avg': 'Target = average × {f}; the closest pick wins. Choose 0–100.',
+      'm.num.lowunique': 'Pick 1–{max}: only numbers chosen by exactly one player count; the lowest wins.',
+      'm.num.highunique': 'Pick 1–{max}: only numbers chosen by exactly one player count; the highest wins.',
+      'm.pick': 'Lock in', 'm.picked': 'Locked in — waiting for others…', 'm.solved': 'Solved! Waiting for others…', 'm.timeLeft': '{s}s left', 'm.nextIn': 'Next round in {s}s',
+      'm.roundEnd': 'Round result', 'm.revealed': 'Revealed', 'm.noPick': 'No pick', 'm.pts': '+{n}', 'm.winner': 'Winner', 'm.void': 'Round void',
+      'm.final': 'Final standings', 'm.champion': 'Champion', 'm.discon': 'Offline', 'm.sol.title': 'Solution of this round',
+      'chat.title': 'Lobby', 'chat.title.n': 'Lobby · {n}', 'chat.ph': 'Say something…', 'chat.send': 'Send', 'chat.quick': 'Quick', 'chat.new': '↓ {n} new', 'chat.connecting': 'Connecting…', 'chat.me': ' (me)',
+      'chat.q1': 'Hi!', 'chat.q2': "Let's play!", 'chat.q3': 'Need one more!', 'chat.q4': 'Join the room!', 'chat.q5': 'One sec', 'chat.q6': 'Thanks', 'chat.q7': 'Bye',
+      'chat.sys.room': '{n} opened a room ({r})', 'chat.rename': 'Rename', 'room.chat': 'Room chat',
+      'err.generic': 'Something went wrong, please try again', 'err.roomFull': 'Room is full', 'err.notHost': 'Host only', 'err.started': 'Match already started', 'err.closed': 'Room closed'
+    }
+  };
+  const KEY = 'as.lang.v1';
+  let lang = 'zh-TW';
+  try { const s = localStorage.getItem(KEY); if (s === 'en' || s === 'zh-TW') lang = s; } catch (e) { /* 隱私模式 */ }
+  const subs = [];
+  function t(key, vars) {
+    let s = (D[lang] && D[lang][key]) || D['zh-TW'][key] || key;
+    if (vars) Object.keys(vars).forEach(function (k) { s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]); });
+    return s;
+  }
+  function setLang(l) {
+    if (l !== 'en' && l !== 'zh-TW') return;
+    lang = l;
+    try { localStorage.setItem(KEY, l); } catch (e) { /* ignore */ }
+    document.documentElement.lang = l;
+    subs.forEach(function (f) { f(l); });
+  }
+  document.documentElement.lang = lang;
+  window.I18N = { t: t, get lang() { return lang; }, setLang: setLang, onChange: function (f) { subs.push(f); }, LANGS: [{ id: 'zh-TW', label: '繁體中文' }, { id: 'en', label: 'English' }] };
+})();
