@@ -228,7 +228,8 @@
   }
   App.onAchieve = function (ids) {
     // 一次合併成一則通知，不要疊滿畫面（結算畫面另外會列出徽章）
-    if (ids.length) setTimeout(function () { UI.toast(t('ach.toast', { n: ids.map(function (id) { return t('ach.' + id); }).join('、') })); }, 300);
+    if (ids.length) setTimeout(function () { if (document.querySelector('.overlay')) return;   // 結算視窗已列出徽章，不重複通知
+      UI.toast(t('ach.toast', { n: ids.map(function (id) { return t('ach.' + id); }).join('、') })); }, 300);
   };
 
   /* ---------- 紀錄與成就 ---------- */

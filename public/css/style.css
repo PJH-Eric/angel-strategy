@@ -555,3 +555,12 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
 @media (min-width: 700px) { .rec-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 .rec-row b { min-width: 3.5em; text-align: right; }
 .rec-row > .mono.muted:last-child { min-width: 3.5em; text-align: right; }
+/* 有對話框時通知移到上方，不蓋住結算按鈕 */
+body:has(.overlay) .toast-host { bottom: calc(96px + var(--safe-b)); }
+/* 手機：計分板改兩欄精簡卡，4～6 人也不會把作答區擠出第一屏 */
+@media (max-width: 760px) {
+  .match .board { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+  .match .board .p { padding: 4px 8px; gap: 6px; font-size: .88em; }
+  .match .board .p .bk { display: none; }
+  .match > .panel:first-child h3 { margin-bottom: 6px; }
+}
