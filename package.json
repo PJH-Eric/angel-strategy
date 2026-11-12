@@ -9,8 +9,8 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/rules.test.js && node tests/kinds.test.js && node tests/hub.test.js",
-    "verify": "node tests/rules.test.js && node tests/kinds.test.js && node tests/hub.test.js",
+    "test": "node tests/rules.test.js && node tests/kinds.test.js && node tests/hub.test.js && node tests/seo.test.js",
+    "verify": "node tests/rules.test.js && node tests/kinds.test.js && node tests/hub.test.js && node tests/seo.test.js",
     "verify:ui": "node tests/layout.test.js"
   },
   "dependencies": {

@@ -385,3 +385,8 @@ svg.figure { width: 100%; height: auto; display: block; background: #0b1014; bor
   .hud .chip.kind { grid-column: 1 / -1; max-width: none; }
 }
 @media (max-width: 560px) { .hud .chip span { letter-spacing: .04em; } }
+/* 回遊戲大廳（只在首頁左上角） */
+.lobby-link { text-decoration: none; color: var(--text); white-space: nowrap; }
+.lobby-link .ic { width: 18px; height: 18px; }
+.topbar.is-home .title { visibility: hidden; }
+@media (max-width: 360px) { .lobby-link .ll-tx { display: none; } .lobby-link { width: 44px; padding: 0; } }

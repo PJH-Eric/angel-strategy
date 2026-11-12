@@ -12,5 +12,6 @@
     http = location.origin;
   }
   const ws = http ? http.replace(/^http/, 'ws') : '';
-  window.AS_CONFIG = { httpUrl: http, wsUrl: ws, configured: !!http };
+  // 遊戲大廳（遊戲小小島）網址：首頁左上角「回遊戲大廳」與首頁按上一頁都回到這裡
+  window.AS_CONFIG = { httpUrl: http, wsUrl: ws, configured: !!http, lobbyUrl: 'https://pjh-eric.github.io/game-lobby/' };
 })();

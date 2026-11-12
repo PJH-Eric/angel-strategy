@@ -25,6 +25,10 @@ jobs:
         env:
           GAME_SERVER_URL: ${{ vars.GAME_SERVER_URL }}
         run: node scripts/inject-config.js dist
+      - name: 注入 GA4 與 SEO
+        env:
+          GA_MEASUREMENT_ID: ${{ vars.GA_MEASUREMENT_ID }}
+        run: node scripts/inject-seo.js dist && cp dist/index.html dist/404.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

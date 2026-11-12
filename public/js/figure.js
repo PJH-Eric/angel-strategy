@@ -52,8 +52,8 @@
     const px = function (n) { return PADX / 2 + CW / 2 + n.x * CW + (W - leaves * CW - PADX) / 2; };
     const py = function (n) { return TOP + (tree.h - n.h) * RH; };
     const near = pz.type === 'near';
-    root.appendChild(tx(W / 2, 22, near ? t('目標 ' + pz.goal + '，盡量接近（最接近的差距：' + R.explainPuzzle(pz, lang).dist + '）', 'Goal ' + pz.goal + ' — get as close as possible (best gap: ' + R.explainPuzzle(pz, lang).dist + ')') : t('目標 ' + pz.target, 'Target ' + pz.target), 'fg-title'));
-    root.appendChild(tx(W / 2, 42, t('每個數字恰好用一次；圓圈編號 = 運算先後順序', 'Each number is used once; circled numbers = order of operations'), 'fg-sub'));
+    root.appendChild(tx(W / 2, 22, near ? t('目標 ' + pz.goal + '，盡量接近（最接近的差距：' + R.explainPuzzle(pz, lang).dist + '）', 'Goal ' + pz.goal + ' · closest possible gap: ' + R.explainPuzzle(pz, lang).dist) : t('目標 ' + pz.target, 'Target ' + pz.target), 'fg-title'));
+    root.appendChild(tx(W / 2, 42, t('每個數字恰好用一次；圓圈編號 = 運算先後順序', 'Each number once · circled = order of steps'), 'fg-sub'));
     (function lines(n) { if (n.leaf) return; [n.l, n.r].forEach(function (c) { root.appendChild(s('line', { x1: px(c), y1: py(c) - (c.leaf ? 16 : 18), x2: px(n), y2: py(n) + 18, class: 'fg-edge' })); lines(c); }); })(tree);
     (function nodes(n) {
       if (n.leaf) {
@@ -135,7 +135,7 @@
     const t = T(lang);
     const ex = R.explainPuzzle(pz, lang);
     const W = 380, RH = 30, rejected = ex.rejected.slice(0, 3);
-    const H = 78 + (ex.rows.length + ex.tests.length) * RH + 40 + rejected.length * 20 + 40;
+    const H = 78 + (ex.rows.length + ex.tests.length) * RH + 40 + rejected.length * 38 + 30;
     const root = svgRoot(W, H, t('找規則解法圖', 'Rule-finding solution diagram'));
     root.appendChild(tx(W / 2, 20, t('規則：', 'Rule: ') + ex.rule, 'fg-title'));
     const cols = [18, 120, 262];
@@ -160,8 +160,9 @@
     y += 6;
     root.appendChild(tx(10, y, t('為什麼不是別的規則？', 'Why not the other rules?'), 'fg-sub', 'start')); y += 18;
     rejected.forEach(function (r) {
-      root.appendChild(tx(14, y, '✗ ' + r.rule + t('：例 ' + (r.example + 1) + ' 會得 ' + r.got + '，不是 ' + r.want, ': example ' + (r.example + 1) + ' would give ' + r.got + ', not ' + r.want), 'fg-bad', 'start'));
-      y += 20;
+      root.appendChild(tx(14, y, '✗ ' + r.rule, 'fg-bad', 'start'));
+      root.appendChild(tx(30, y + 17, t('例 ' + (r.example + 1) + ' 會得 ' + r.got + '，不是 ' + r.want, 'Example ' + (r.example + 1) + ' would give ' + r.got + ', not ' + r.want), 'fg-sub', 'start'));
+      y += 38;
     });
     return root;
   }
@@ -172,7 +173,7 @@
   function scaleFigure(pz, assign, lang, opts) {
     opts = opts || {};
     const t = T(lang);
-    const W = 460, RH = 128, TOP = 30;
+    const W = 380, RH = 128, TOP = 30;
     const sol = !!opts.solution;
     const H = TOP + pz.scales.length * RH + (sol ? 56 : 8);
     const root = svgRoot(W, H, t('天平配重圖', 'Balance diagram'));
@@ -193,20 +194,21 @@
       const ls = sum(L), rs = sum(Rr);
       const ang = full ? Math.max(-9, Math.min(9, (rs - ls) * 1.6)) : 0;   // 左重則左端下沉（角度為正 = 左低）
       const a = (-ang) * Math.PI / 180;
-      const arm = 150, ex1 = cx - arm * Math.cos(a), ey1 = y0 + arm * Math.sin(a), ex2 = cx + arm * Math.cos(a), ey2 = y0 - arm * Math.sin(a);
+      const arm = 128, ex1 = cx - arm * Math.cos(a), ey1 = y0 + arm * Math.sin(a), ex2 = cx + arm * Math.cos(a), ey2 = y0 - arm * Math.sin(a);
       root.appendChild(s('polygon', { points: (cx - 10) + ',' + (y0 + 52) + ' ' + (cx + 10) + ',' + (y0 + 52) + ' ' + cx + ',' + y0, class: 'fg-stand' }));
       root.appendChild(s('line', { x1: ex1, y1: ey1, x2: ex2, y2: ey2, class: 'fg-beam' + (full && ls === rs ? ' fg-balanced' : '') }));
       root.appendChild(s('circle', { cx: cx, cy: y0, r: 5, class: 'fg-pivot' }));
       [[L, ex1, ey1, ls], [Rr, ex2, ey2, rs]].forEach(function (side) {
         const arr = side[0], ex = side[1], ey = side[2], total = side[3];
-        const bw = 34, gap = 3, tw = arr.length * (bw + gap) - gap;
-        root.appendChild(s('line', { x1: ex, y1: ey, x2: ex - tw / 2, y2: ey + 26, class: 'fg-rope' }));
-        root.appendChild(s('line', { x1: ex, y1: ey, x2: ex + tw / 2, y2: ey + 26, class: 'fg-rope' }));
-        root.appendChild(s('line', { x1: ex - tw / 2 - 4, y1: ey + 26, x2: ex + tw / 2 + 4, y2: ey + 26, class: 'fg-pan' }));
+        const bw = 29, gap = 3, tw = arr.length * (bw + gap) - gap;
+        const pc = Math.max(tw / 2 + 8, Math.min(W - tw / 2 - 8, ex));   // 盤子不超出圖框
+        root.appendChild(s('line', { x1: ex, y1: ey, x2: pc - tw / 2, y2: ey + 26, class: 'fg-rope' }));
+        root.appendChild(s('line', { x1: ex, y1: ey, x2: pc + tw / 2, y2: ey + 26, class: 'fg-rope' }));
+        root.appendChild(s('line', { x1: pc - tw / 2 - 4, y1: ey + 26, x2: pc + tw / 2 + 4, y2: ey + 26, class: 'fg-pan' }));
         arr.forEach(function (it, q) {
-          const bx = ex - tw / 2 + q * (bw + gap);
-          root.appendChild(s('rect', { x: bx, y: ey + 28, width: bw, height: 30, rx: 3, class: 'fg-item ' + (it.i >= 0 ? SH_CLS[it.i] : 'fg-const') }));
-          root.appendChild(tx(bx + bw / 2, ey + 48, it.i < 0 ? it.w : (it.w != null ? SH[it.i] + it.w : SH[it.i]), 'fg-itemt'));
+          const bx = pc - tw / 2 + q * (bw + gap);
+          root.appendChild(s('rect', { x: bx, y: ey + 28, width: bw, height: 28, rx: 3, class: 'fg-item ' + (it.i >= 0 ? SH_CLS[it.i] : 'fg-const') }));
+          root.appendChild(tx(bx + bw / 2, ey + 46.5, it.i < 0 ? it.w : (it.w != null ? SH[it.i] + it.w : SH[it.i]), 'fg-itemt'));
         });
         if (full) root.appendChild(tx(ex, ey - 8, total, 'fg-sum'));
       });
@@ -216,7 +218,7 @@
     });
     if (sol) {
       const y = H - 18;
-      root.appendChild(tx(W / 2, y, pz.solution.map(function (w, i) { return SH[i] + ' = ' + w; }).join('    '), 'fg-final-eq'));
+      root.appendChild(tx(W / 2, y, pz.solution.map(function (w, i) { return SH[i] + ' = ' + w; }).join('　　'), 'fg-final-eq'));
     }
     return root;
   }
@@ -227,7 +229,8 @@
     const t = T(lang);
     const n = pz.n, CW = 56, RH = 56, W = Math.max(340, n * CW + 90), TOP = 40;
     const sol = !!opts.solution;
-    const lines = sol ? pz.n - 1 : 0;
+    const chunk = function (arr, k) { const o = []; for (let i = 0; i < arr.length; i += k) o.push(arr.slice(i, i + k)); return o; };
+    const lines = sol ? R.explainPuzzle(pz, lang).lines.reduce(function (a, ln) { return a + 1 + chunk(ln.items, 2).length; }, 0) : 0;
     const H = TOP + n * RH + 20 + lines * 20 + (sol ? 30 : 0);
     const root = svgRoot(W, H, t('算式金字塔圖', 'Number pyramid diagram'));
     root.appendChild(tx(W / 2, 20, t('頂端目標：', 'Top target: ') + neg(pz.target), 'fg-title'));
@@ -273,7 +276,10 @@
     if (sol) {
       const ex = R.explainPuzzle(pz, lang);
       let y = TOP + n * RH + 14;
-      ex.lines.forEach(function (ln) { root.appendChild(tx(12, y, t('第' + ln.level + '層（' + prettyOps(ln.op) + '）：', 'L' + ln.level + ' (' + prettyOps(ln.op) + '): ') + neg(ln.items.join('  ；  ')), 'fg-line', 'start')); y += 20; });
+      ex.lines.forEach(function (ln) {
+        root.appendChild(tx(12, y, t('第' + ln.level + '層（' + prettyOps(ln.op) + '）', 'Level ' + ln.level + ' (' + prettyOps(ln.op) + ')'), 'fg-sub', 'start')); y += 20;
+        chunk(ln.items, 2).forEach(function (row) { root.appendChild(tx(26, y, neg(row.join('　　')), 'fg-line', 'start')); y += 20; });
+      });
       root.appendChild(tx(W / 2, y + 8, t('頂端 ', 'Top ') + neg(pz.target) + '  ✓', 'fg-final-eq'));
     }
     return root;

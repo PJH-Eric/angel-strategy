@@ -26,3 +26,10 @@ npm run verify     # 規則、題型與線上引擎測試
 3. 推送到 `main`，`.github/workflows/pages.yml` 會測試、注入伺服器網址並發佈前端。
 
 伺服器網址只有一個入口：`GAME_SERVER_URL`（`public/js/server-url.js`，由 `scripts/inject-config.js` 於建置時寫入）。
+
+## GA4 與 SEO
+
+- `seo.config.json` 是標題、說明、分享圖與網址的唯一設定；建置時 `scripts/inject-seo.js` 注入 GA4（repo 變數 `GA_MEASUREMENT_ID`，未設定時用全遊戲共用 ID）、canonical、Open Graph、Twitter 卡與 JSON-LD，並產生 `sitemap.xml`。
+- 只有正式網址 `https://pjh-eric.github.io/angel-strategy/` 會載入 Google tag，本機與預覽不送資料；事件不含暱稱、房號或邀請碼。
+- 封面與分享圖：`public/assets/images/cover.webp`、`seo.webp`（1200×675）。
+- 首頁左上角「回遊戲大廳」連到 https://pjh-eric.github.io/game-lobby/ ，首頁按瀏覽器上一頁也會回大廳。

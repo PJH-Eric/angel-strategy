@@ -49,7 +49,7 @@
       o.onSend(v); input.input.value = '';
     }
     input.input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } e.stopPropagation(); });
-    const quickBtn = UI.button('⚡', { cls: 'small ghost', aria: t('chat.quick'), onClick: function () {
+    const quickBtn = UI.button('', { cls: 'small ghost icon', icon: 'bolt', aria: t('chat.quick'), onClick: function () {
       UI.menu(quickBtn, QUICK.map(function (k) { return { id: k, label: t(k) }; }), function (k) { if (!disabledText) o.onSend(t(k)); });
     } });
     const title = el('b');
@@ -140,7 +140,11 @@
     }
 
     /* ----- 連線 ----- */
-    function send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+    function ga(fn) { try { if (window.GameAnalytics) fn(window.GameAnalytics); } catch (e) { /* 統計失敗不影響遊戲 */ } }
+    function send(o) {
+      if (o.t === 'room:create' || o.t === 'room:join') S.gaPending = { action: o.t === 'room:create' ? 'create' : 'join', via: o.inv ? 'invite_link' : 'lobby', spec: o.role === 'spec' };
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify(o));
+    }
     function connect() {
       if (S.dead) return;
       if (!AS_CONFIG.configured) { S.conn = 'noserver'; S.view = 'status'; render(); return; }
@@ -173,7 +177,7 @@
           else if (m.op === 'msg') { S.lobbyMsgs.push(m.msg); if (S.lobbyMsgs.length > 50) S.lobbyMsgs.shift(); if (chat && S.view === 'lobby') chat.push(m.msg); }
           else if (m.op === 'online') { S.lobbyOnline = m.n; if (chat && S.view === 'lobby') chat.setOnline(m.n); }
           break;
-        case 'joined': S.role = m.role; break;
+        case 'joined': S.role = m.role; if (S.gaPending && !S.gaPending.spec && m.role === 'play') { const g = S.gaPending; ga(function (A) { A.track('room_' + g.action, { mode: 'online', via: g.via }); }); } S.gaPending = null; break;
         case 'room': onRoom(m.room); break;
         case 'roomchat': S.roomMsgs.push(m.msg); if (S.roomMsgs.length > 50) S.roomMsgs.shift(); if (chat && (S.view === 'room' || S.view === 'match')) chat.push(m.msg); break;
         case 'left': case 'closed':
@@ -181,14 +185,15 @@
           else if (m.reason === 'kicked') UI.toast(t('room.kick'), true);
           resetRoomState(); S.invite = null; S.view = 'lobby'; render(); send({ t: 'lobbychat', op: 'join' });
           break;
-        case 'matchStart': S.leftMatch = false; if (S.match) { S.match.last = null; S.match.cur = null; S.match.finished = false; } if (finalDlg) { finalDlg.close(); finalDlg = null; } break;
+        case 'matchStart': if (S.role === 'play') ga(function (A) { A.start({ mode: 'online', players: S.room ? S.room.players.length : 2 }, 'm:' + Date.now()); });
+          S.leftMatch = false; if (S.match) { S.match.last = null; S.match.cur = null; S.match.finished = false; } if (finalDlg) { finalDlg.close(); finalDlg = null; } break;
         case 'round': onRound(m); break;
         case 'progress': S.done = m.done; drawBoard(); break;
         case 'picked': S.picked = true; drawRoundStatus(); break;
         case 'solved': S.solved = true; Audio2.sfx('ok'); drawRoundStatus(); break;
         case 'wrong': if (widget) widget.bad(); Audio2.sfx('wrong'); Audio2.vibrate(80); UI.toast(t('play.wrong'), true); break;
         case 'roundEnd': onRoundEnd(m); break;
-        case 'matchEnd': onMatchEnd(m); break;
+        case 'matchEnd': if (S.role === 'play') ga(function (A) { A.end({ result: m.winners.indexOf(pid) !== -1 ? 'win' : 'lose' }); }); onMatchEnd(m); break;
         case 'error': onError(m); break;
         default: break;
       }

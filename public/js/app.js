@@ -37,14 +37,31 @@
     const ctx = {
       screen: screen,
       setTitle: function (main, sub) { title.textContent = main; if (sub) title.appendChild(el('small', { text: sub })); },
+      setLobby: function () {
+        bar.classList.add('is-home');
+        const a = el('a', { class: 'btn small ghost lobby-link', href: AS_CONFIG.lobbyUrl, 'aria-label': t('home.lobby') }, [Icon.el('back'), el('span', { class: 'll-tx', text: t('home.lobby') })]);
+        a.addEventListener('click', function () { Audio2.sfx('click'); });
+        left.textContent = ''; left.appendChild(a);
+      },
       setBack: function (fn, label) { left.textContent = ''; if (fn) left.appendChild(UI.button('', { cls: 'small ghost icon', icon: 'back', aria: label || t('common.back'), onClick: fn })); },
       onDestroy: function (f) { App.destroy = f; },
       onRerender: function (f) { App.rerender = f; },
       onPause: function (p, r) { App.pauseFn = p; App.resumeFn = r; }
     };
+    try { if (window.GameAnalytics) GameAnalytics.pageView(name); } catch (e) { /* ignore */ }
     App.screens[name](ctx, App.params);
   }
   App.go = go;
+
+  /* ---------- 上一頁：其他畫面回首頁，首頁再按上一頁回遊戲大廳 ---------- */
+  function armHistory() { try { history.replaceState({ as: 'root' }, ''); history.pushState({ as: 'app' }, ''); } catch (e) { /* ignore */ } }
+  window.addEventListener('popstate', function (e) {
+    const st = e.state || {};
+    if (st.lc || st.as === 'app') return;                 // 聊天面板自己處理
+    if (App.cur === 'home' || !App.cur) { location.href = AS_CONFIG.lobbyUrl; return; }
+    try { history.pushState({ as: 'app' }, ''); } catch (err) { /* ignore */ }
+    go('home');
+  });
   I18N.onChange(function () { if (App.rerender) App.rerender(); else if (App.cur) go(App.cur, App.params); });
 
   /* ---------- 設定彈窗（Modal，非路由、非抽屜） ---------- */
@@ -90,6 +107,7 @@
   /* ---------- 首頁 ---------- */
   App.screens.home = function (ctx) {
     ctx.setTitle(t('app.name'));
+    ctx.setLobby();
     const halo = '<svg viewBox="0 0 120 120" aria-hidden="true"><g class="ring" fill="none" stroke="#f2a81d" stroke-width="3"><ellipse cx="60" cy="26" rx="34" ry="10"/><ellipse cx="60" cy="26" rx="24" ry="6" stroke-width="1.5" opacity=".6"/></g>' +
       '<g fill="none" stroke="#5cb7cf" stroke-width="2.5" stroke-linejoin="round"><path d="M60 40 L38 64 L14 52 L30 84 L60 104 L90 84 L106 52 L82 64 Z" fill="rgba(92,183,207,.08)"/><path d="M60 40 V104 M38 64 L60 84 L82 64" opacity=".6"/></g></svg>';
     const col = el('div', { class: 'home' }, [
@@ -183,6 +201,8 @@
     const limit = daily ? R.dailyTimeLimitSec(diff) : R.timeLimitSec(diff, p.level);
     const hintCap = R.hintLimit(diff);
     const S = { idx: 0, hints: 0, ph: 0, tries: 0, elapsed: 0, last: performance.now(), paused: false, ended: false, hintMsgs: [], widget: null, wstate: null };
+    const gaKey = 'solo:' + Date.now();
+    try { if (window.GameAnalytics) GameAnalytics.start({ mode: 'solo', difficulty: diff, variant: daily ? 'daily' : 'campaign' }, gaKey); } catch (e) { /* ignore */ }
     let timer = null;
     ctx.setTitle(daily ? t('daily.title') : t('camp.level', { n: p.level }), t('diff.' + diff));
 
@@ -289,6 +309,7 @@
       if (S.widget) { S.widget.destroy(); S.widget = null; }
       const usedSec = Math.round(S.elapsed / 10) / 100;
       const win = why === 'win';
+      try { if (window.GameAnalytics) GameAnalytics.end({ result: win ? 'win' : (why === 'gaveup' ? 'dnf' : 'lose') }, gaKey); } catch (e) { /* ignore */ }
       let stars = 0;
       if (win) {
         if (daily) Store.setDaily(p.date, diff, usedSec);
@@ -335,6 +356,7 @@
   // 等所有腳本（含 online.js）載入後再啟動；邀請連結（?room=..&inv=..）交給線上模組處理
   window.addEventListener('load', function () {
     applyPrefs();
+    armHistory();
     const q = new URLSearchParams(location.search);
     if (q.get('room') && q.get('inv') && App.screens.online) go('online', { invite: { room: q.get('room'), inv: q.get('inv'), role: q.get('role') || 'play' } });
     else go('home');

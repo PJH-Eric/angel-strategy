@@ -67,11 +67,15 @@ const CHECK = function () {
         if (shotsDir) await pg.screenshot({ path: path.join(shotsDir, v[0] + '_' + lang + '_' + name + '.png') });
       };
       await scene('home', async function () { await pg.evaluate(function () { App.go('home'); }); });
+      // 「回遊戲大廳」只在首頁左上角出現，且完整落在視窗內
+      const lob = await pg.evaluate(function () { const a = document.querySelector('.topbar .lobby-link'); if (!a) return null; const r = a.getBoundingClientRect(); return { href: a.getAttribute('href'), x: r.left, r: r.right, top: r.top, vw: innerWidth }; });
+      if (!lob || lob.href !== 'https://pjh-eric.github.io/game-lobby/' || lob.x < 0 || lob.r > lob.vw / 2 || lob.top > 60) problems.push(v[0] + '/' + lang + '/home：回遊戲大廳按鈕缺少或位置不對 ' + JSON.stringify(lob));
       await scene('howto', async function () { await pg.click('.home .btn.ghost >> nth=0').catch(function () {}); });
       await pg.evaluate(function () { document.querySelectorAll('.overlay').forEach(function (o) { o.remove(); }); });
       await scene('settings', async function () { await pg.evaluate(function () { App.go('home'); }); await pg.click('.topbar .btn.icon'); await pg.waitForSelector('.overlay'); });
       await pg.evaluate(function () { document.querySelectorAll('.overlay').forEach(function (o) { o.remove(); }); });
       await scene('campaign', async function () { await pg.evaluate(function () { App.go('campaign', { diff: 'baby' }); }); });
+      if (await pg.evaluate(function () { return !!document.querySelector('.lobby-link'); })) problems.push(v[0] + '/' + lang + '/campaign：回遊戲大廳按鈕只應出現在首頁');
       await scene('daily', async function () { await pg.evaluate(function () { App.go('daily', { diff: 'normal' }); }); });
       const kinds = ['deduce', 'arith', 'pyramid', 'rule', 'near', 'scale'];
       for (let lv = 1; lv <= 6; lv++) {
