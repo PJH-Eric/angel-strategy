@@ -484,3 +484,10 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
 .net-banner { position: fixed; top: calc(var(--safe-t) + 54px); left: 50%; width: max-content; transform: translateX(-50%); z-index: 850; display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 24px); padding: 8px 14px; background: #3a1512; border: 1px solid var(--red); color: #ffd7d3; font-size: .9em; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
 .net-banner[hidden] { display: none; }
 .net-banner .ic { color: var(--red); }
+/* 減少動態：設定開啟或系統偏好時，所有動畫與過場一律關閉 */
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation: none !important; transition: none !important; }
+.reduce-motion .btn:active, .reduce-motion .card.pick.is-on { transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  #app::after { display: none; }
+}

@@ -175,7 +175,7 @@
       // 跳到區段／目前進度（200 關不用一直往下滑）
       let cur = 1;
       while (cur < R.LEVELS_PER_DIFF && Store.stars(diff, cur) > 0) cur++;
-      const toLv = function (lv, smooth) { const tile = grid.children[lv - 1]; if (tile) tile.scrollIntoView({ block: lv === 1 ? 'start' : 'center', behavior: smooth ? 'smooth' : 'auto' }); };
+      const toLv = function (lv, smooth) { const tile = grid.children[lv - 1]; if (tile) tile.scrollIntoView({ block: lv === 1 ? 'start' : 'center', behavior: smooth && !Store.settings.reduce ? 'smooth' : 'auto' }); };
       jump.textContent = '';
       jump.appendChild(UI.button(t('camp.current') + ' ' + cur, { cls: 'small primary', icon: 'flag', onClick: function () { toLv(cur, true); } }));
       for (let a = 1; a <= R.LEVELS_PER_DIFF; a += 50) (function (a) { jump.appendChild(UI.button(a + '–' + Math.min(R.LEVELS_PER_DIFF, a + 49), { cls: 'small ghost', onClick: function () { toLv(a, true); } })); })(a);
