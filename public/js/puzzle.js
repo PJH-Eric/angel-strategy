@@ -271,6 +271,25 @@
     }
     // 尚未填滿：未知的圖形顯示成 null，天平只顯示形狀（不倾斜）
     function partial() { return st.assign.map(function (v) { return v == null ? null : v; }); }
+    // 鍵盤：←→ 換圖形、輸入數字指定重量（兩位數自動判斷）、Backspace 清除、Enter 送出
+    let kbuf = '', kt = null;
+    function onKey(e) {
+      if (modalOpen()) return;
+      const k = e.key;
+      if (k >= '0' && k <= '9') {
+        kbuf += k; clearTimeout(kt);
+        const exact = puzzle.bag.indexOf(Number(kbuf)) !== -1, longer = puzzle.bag.some(function (w) { return String(w).indexOf(kbuf) === 0 && String(w) !== kbuf; });
+        if (exact && !longer) { put(Number(kbuf)); kbuf = ''; }
+        else if (!exact && !longer) kbuf = '';
+        else kt = setTimeout(function () { if (puzzle.bag.indexOf(Number(kbuf)) !== -1) put(Number(kbuf)); kbuf = ''; }, 700);
+      } else if (k === 'ArrowRight' || k === 'Tab' && !e.shiftKey) { st.cur = (st.cur + 1) % puzzle.m; draw(); }
+      else if (k === 'ArrowLeft') { st.cur = (st.cur - 1 + puzzle.m) % puzzle.m; draw(); }
+      else if (k === 'Backspace') { st.assign[st.cur] = null; draw(); }
+      else if (k === 'Enter') submit();
+      else return;
+      e.preventDefault();
+    }
+    document.addEventListener('keydown', onKey);
     function submit() {
       if (st.assign.some(function (v) { return v == null; })) { UI.toast(t('play.fillAll'), true); return; }
       opts.onSubmit(st.assign.slice());
@@ -280,7 +299,7 @@
       bad: function () { slots.forEach(function (b) { b.classList.remove('bad'); void b.offsetWidth; b.classList.add('bad'); }); },
       // 提示直接幫你填上那個圖形的重量（原本佔用該重量的圖形會清空）
       applyHint: function (n) { const i = Math.min(n, puzzle.m - 1), w = puzzle.solution && puzzle.solution[i]; if (w == null) return; const at = st.assign.indexOf(w); if (at !== -1) st.assign[at] = null; st.assign[i] = w; draw(); },
-      destroy: function () {} };
+      destroy: function () { clearTimeout(kt); document.removeEventListener('keydown', onKey); } };
   }
 
   /* ---------- 算式金字塔 ---------- */
@@ -305,10 +324,24 @@
       UI.button(t('play.submit'), { cls: 'primary', onClick: submit })
     ]);
     const entryEl = el('div', { class: 'stack' }, [rowsEl, act]);
+    // 鍵盤：↑↓ 選層（從第 1 層開始）、+ − × 設定運算、Enter 送出
+    let kl = 0;
+    function onKey(e) {
+      if (modalOpen()) return;
+      const k = e.key, map = { '+': '+', '-': '-', '*': '*', 'x': '*', 'X': '*' };
+      if (map[k] && puzzle.ops.indexOf(map[k]) !== -1) { st.ops[kl] = map[k]; kl = Math.min(puzzle.n - 2, kl + 1); Audio2.sfx('key'); draw(); }
+      else if (k === 'ArrowUp') { kl = Math.min(puzzle.n - 2, kl + 1); draw(); }
+      else if (k === 'ArrowDown') { kl = Math.max(0, kl - 1); draw(); }
+      else if (k === 'Backspace') { st.ops[kl] = null; kl = Math.max(0, kl - 1); draw(); }
+      else if (k === 'Enter') submit();
+      else return;
+      e.preventDefault();
+    }
+    document.addEventListener('keydown', onKey);
     function cycle(l) { const i = puzzle.ops.indexOf(st.ops[l]); st.ops[l] = puzzle.ops[(i + 1) % puzzle.ops.length]; Audio2.sfx('key'); draw(); }
     function draw() {
       fig.textContent = ''; fig.appendChild(Figure.pyramid(puzzle, st.ops, I18N.lang, cycle));
-      btns.forEach(function (g, l) { g.forEach(function (x) { x.b.classList.toggle('is-on', st.ops[l] === x.o); }); });
+      btns.forEach(function (g, l) { g.forEach(function (x) { x.b.classList.toggle('is-on', st.ops[l] === x.o); }); rowsEl.children[l].classList.toggle('is-cur', kl === l); });
       if (opts.onChange) opts.onChange(st);
     }
     function submit() {
@@ -319,7 +352,7 @@
     return { cluesEl: cluesEl, entryEl: entryEl, state: st,
       bad: function () { fig.classList.remove('bad'); void fig.offsetWidth; fig.classList.add('bad'); },
       applyHint: function (n) { const l = Math.min(n, puzzle.n - 2); if (puzzle.solution) { st.ops[l] = puzzle.solution[l]; draw(); } },
-      destroy: function () {} };
+      destroy: function () { document.removeEventListener('keydown', onKey); } };
   }
 
   function mount(pz, o) {

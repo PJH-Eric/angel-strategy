@@ -109,7 +109,8 @@
       ]),
       sec(t('how.kinds'), R.PUZZLE_KINDS.map(function (k) { return item(Icon.kind(k), t('kind.' + k), t('howk.' + k)); })),
       sec(t('how.onlineGames'), ['num', 'auction', 'hilo', 'remove'].map(function (k) { return item(Icon.kind(k), t('m.k.' + k), t('howo.' + k)); })),
-      el('p', { class: 'muted', text: t('how.5') })
+      el('p', { class: 'muted', text: t('how.5') }),
+      el('p', { class: 'muted', text: t('how.kb') })
     ];
     const m = UI.modal({ title: t('how.title'), top: true,
       body: body,

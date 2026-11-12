@@ -480,3 +480,4 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
 .ops .btn { min-width: 0; }
 @media (max-width: 400px) { .ops { grid-template-columns: repeat(4, 1fr); } }   /* 小手機：運算鍵排兩列，按鍵仍夠大 */
 .pad-grid .btn { min-width: 0; }
+.play .row.is-cur > .label { color: var(--cyan); text-decoration: underline; text-underline-offset: 4px; }
