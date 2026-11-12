@@ -34,6 +34,27 @@ function mk(hub, pid, name) {
 }
 function roomOf(hub, c) { return hub._rooms.get(c.last('room').room.id); }
 
+t('房主設定回合內容與搶答難度：非法值被過濾、非房主不能改、開局計畫照設定', async function () {
+  const hub = createHub({ betweenMs: 10 });
+  const a = mk(hub, 'pidKind001', 'A'), b = mk(hub, 'pidKind002', 'B');
+  a.say({ t: 'room:create', name: 'k', format: 'points', rounds: 4, timeSec: 20 });
+  const r = roomOf(hub, a);
+  assert.deepStrictEqual(r.settings.kinds, R.ONLINE_KINDS);
+  assert.strictEqual(r.settings.level, 'ramp');
+  a.say({ t: 'room:settings', kinds: ['scale', 'xx', 'hilo'], level: 'hard' });
+  assert.deepStrictEqual(r.settings.kinds, ['hilo', 'scale']);
+  assert.strictEqual(r.settings.level, 'hard');
+  a.say({ t: 'room:settings', level: 'nope' }); assert.strictEqual(r.settings.level, 'hard');
+  b.say({ t: 'room:join', id: r.id });
+  b.say({ t: 'room:settings', kinds: ['num'] }); assert.strictEqual(b.err(), 'not_host');
+  assert.deepStrictEqual(r.settings.kinds, ['hilo', 'scale']);
+  assert.deepStrictEqual(b.last('room').room.settings.kinds, ['hilo', 'scale'], '設定廣播給房內所有人');
+  a.say({ t: 'room:start' });
+  assert.ok(r.match.plan.every((rd) => rd.kind === 'hilo' || rd.kind === 'scale'));
+  r.match.plan.filter((rd) => rd.puzzle).forEach((rd) => assert.strictEqual(rd.puzzle.diff, 'hard'));
+  hub.shutdown();
+});
+
 t('建房、大廳列表、房主設定、非房主不可改', async function () {
   const hub = createHub();
   const a = mk(hub, 'pidAAAA1', 'A'), b = mk(hub, 'pidBBBB1', 'B');

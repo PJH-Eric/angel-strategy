@@ -63,6 +63,20 @@ t('隨機挑戰：同一種子結果相同、不同種子不同；5 題型別不
   assert.strictEqual(sigs.size, 30, '30 個不同種子要出 30 組不同題目');
 });
 
+t('線上回合內容可選：只出勾選的玩法、前幾回合全部輪到、不連續重複、難度可固定', () => {
+  const sel = ['scale', 'near', 'auction'];
+  const plan = R.buildRoundPlan('k1', 9, 3, { kinds: sel, level: 'hard' });
+  assert.ok(plan.every((rd) => sel.indexOf(rd.kind) !== -1));
+  assert.strictEqual(new Set(plan.slice(0, 3).map((rd) => rd.kind)).size, 3, '前 3 回合三種都出現');
+  for (let i = 1; i < plan.length; i++) assert.notStrictEqual(plan[i].kind, plan[i - 1].kind);
+  plan.filter((rd) => rd.puzzle).forEach((rd) => { assert.strictEqual(rd.puzzle.diff, 'hard'); assert.ok(R.checkPuzzle(rd.puzzle, rd.puzzle.solution).ok); });
+  const all = R.buildRoundPlan('k2', 10, 4, {});
+  assert.strictEqual(new Set(all.map((rd) => rd.kind)).size, 10, '預設 10 回合十種玩法各一次');
+  assert.deepStrictEqual(R.cleanOnlineKinds([]), R.ONLINE_KINDS, '空選擇視同全選');
+  assert.deepStrictEqual(R.cleanOnlineKinds(['bogus', 'hilo']), ['hilo']);
+  assert.strictEqual(R.buildRoundPlan('k3', 5, 2, { kinds: ['rule'] }).filter((rd) => rd.kind === 'rule').length, 5, '只選一種也能連續出');
+});
+
 t('台北時間切日', () => {
   assert.strictEqual(R.taipeiDate(Date.UTC(2026, 10, 12, 15, 59, 59)), '2026-11-12');
   assert.strictEqual(R.taipeiDate(Date.UTC(2026, 10, 12, 16, 0, 0)), '2026-11-13');

@@ -528,24 +528,40 @@
     return { ranks: ranks, points: points, winners: winners };
   }
 
-  // 對局回合計畫：深度優先交錯三種題型
-  function buildRoundPlan(seed, rounds, nPlayers) {
+  // 線上可選的回合內容：4 種心理戰＋6 種搶答題；題目難度可固定或漸進
+  const ONLINE_MIND = ['num', 'auction', 'hilo', 'remove'];
+  const ONLINE_KINDS = ONLINE_MIND.concat(PUZZLE_KINDS);
+  const ONLINE_LEVELS = ['ramp', 'easy', 'normal', 'hard'];
+  function cleanOnlineKinds(list) {
+    const out = Array.isArray(list) ? ONLINE_KINDS.filter(function (k) { return list.indexOf(k) !== -1; }) : ONLINE_KINDS.slice();
+    return out.length ? out : ONLINE_KINDS.slice();
+  }
+  // 對局回合計畫：選到的玩法每一輪都洗牌一次，前幾回合就會全部輪到，且不連續重複
+  function buildRoundPlan(seed, rounds, nPlayers, opts) {
+    opts = opts || {};
     const rand = makeRng('plan:' + seed);
-    const cycle = ['num', 'deduce', 'auction', 'hilo', 'arith', 'remove', 'num', 'rule', 'auction', 'pyramid', 'hilo', 'scale', 'near', 'remove'];
+    const kinds = cleanOnlineKinds(opts.kinds);
+    const level = ONLINE_LEVELS.indexOf(opts.level) !== -1 ? opts.level : 'ramp';
+    const order = [];
+    while (order.length < rounds) {
+      let batch = rand.shuffle(kinds);
+      if (order.length && batch.length > 1 && batch[0] === order[order.length - 1]) batch.push(batch.shift());
+      order.push.apply(order, batch);
+    }
     const plan = [];
+    let numSeen = 0;
     for (let i = 0; i < rounds; i++) {
-      const kind = cycle[i % cycle.length];
+      const kind = order[i];
       if (kind === 'num') {
-        const mode = NUM_MODES[Math.floor(i / 2) % NUM_MODES.length];
+        const mode = NUM_MODES[numSeen++ % NUM_MODES.length];
         plan.push({ kind: 'num', params: numGameParams(mode, nPlayers, rand) });
       } else if (kind === 'auction') {
         plan.push({ kind: 'auction', params: { prize: rand.int(1, 3) }, seed: rand.int(1, 1e9) });
       } else if (kind === 'hilo' || kind === 'remove') {
         plan.push({ kind: kind, params: {}, seed: rand.int(1, 1e9) });
       } else {
-        const diff = i < 3 ? 'easy' : (i < 8 ? 'normal' : 'hard');
-        const puzzle = buildPuzzle(kind, rand, diff, Math.floor(i / 3));
-        plan.push({ kind: kind, puzzle: puzzle });
+        const diff = level !== 'ramp' ? level : (i < 3 ? 'easy' : (i < 8 ? 'normal' : 'hard'));
+        plan.push({ kind: kind, puzzle: buildPuzzle(kind, rand, diff, Math.floor(i / 3)), diff: diff });
       }
     }
     return plan;
@@ -642,7 +658,7 @@
     RANDOM_COUNT: RANDOM_COUNT, randomPuzzles: randomPuzzles, randomTimeLimitSec: randomTimeLimitSec,
     pointsForRank: pointsForRank, rankByKey: rankByKey, numGameParams: numGameParams, resolveNumGame: resolveNumGame, resolveRace: resolveRace,
     registry: registry, PUZZLE_KINDS: PUZZLE_KINDS, checkPuzzle: checkPuzzle, explainPuzzle: explainPuzzle, hintPuzzle: hintPuzzle, BANK_START: BANK_START,
-    buildRoundPlan: buildRoundPlan, publicPuzzle: publicPuzzle,
+    buildRoundPlan: buildRoundPlan, ONLINE_KINDS: ONLINE_KINDS, ONLINE_MIND: ONLINE_MIND, ONLINE_LEVELS: ONLINE_LEVELS, cleanOnlineKinds: cleanOnlineKinds, publicPuzzle: publicPuzzle,
     newMatch: newMatch, applyRound: applyRound, aliveIds: aliveIds,
     cleanText: cleanText
   };

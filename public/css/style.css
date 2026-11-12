@@ -450,3 +450,13 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
 .how-item > .ic { width: 28px; height: 28px; color: var(--cyan); margin-top: 2px; }
 .how-item b { display: block; font-size: .95em; }
 .how-item p { margin: 2px 0 0; font-size: .84em; color: var(--dim); line-height: 1.45; }
+/* 房間：回合內容與難度 */
+.set-block { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 6px; gap: 10px; }
+.kind-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.kind-btn { opacity: .55; }
+.kind-btn.is-on { opacity: 1; --bd: var(--cyan); --c: #14323d; }
+.kind-btn .ic { color: var(--cyan); }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.seg .btn.is-on { --bd: var(--amber); --c: #8a5f0c; color: #fff3d4; }
+/* 有左下聊天氣泡的頁面：捲到底時內容不被氣泡蓋住 */
+.bubble-safe { padding-bottom: 92px; }

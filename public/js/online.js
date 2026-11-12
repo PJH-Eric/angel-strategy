@@ -279,7 +279,7 @@
       if (S.view === 'room') return renderRoom();
       if (S.view === 'match') return renderMatch();
     }
-    function page(children) { const c = el('div', { class: 'stack pad' }, children); ctx.screen.appendChild(UI.scrollArea(c)); return c; }
+    function page(children) { const c = el('div', { class: 'stack pad bubble-safe' }, children); ctx.screen.appendChild(UI.scrollArea(c)); return c; }
 
     function renderStatus() {
       const noSrv = S.conn === 'noserver';
@@ -368,6 +368,30 @@
     }
 
     /* 房間 */
+    // 房主選回合內容（至少保留一種）與搶答題難度
+    function kindsEditor(s) {
+      const on = R.cleanOnlineKinds(s.kinds);
+      const group = function (title, list) {
+        return el('div', { class: 'stack', style: 'gap:6px' }, [el('div', { class: 'muted', style: 'font-size:.82em', text: title }), el('div', { class: 'kind-pick' }, list.map(function (k) {
+          const isOn = on.indexOf(k) !== -1;
+          return UI.button(t('m.k.' + k), { cls: 'small kind-btn' + (isOn ? ' is-on' : ''), icon: Icon.kind(k), aria: t('m.k.' + k) + (isOn ? ' ✓' : ''), onClick: function () {
+            const next = isOn ? on.filter(function (x) { return x !== k; }) : on.concat([k]);
+            if (!next.length) { UI.toast(t('room.kindsMin'), true); return; }
+            send({ t: 'room:settings', kinds: next });
+          } });
+        }))]);
+      };
+      return el('div', { class: 'stack set-block' }, [
+        el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.kinds') }), UI.button(t('room.kindsAll'), { cls: 'small ghost', onClick: function () { send({ t: 'room:settings', kinds: R.ONLINE_KINDS }); } })]),
+        group(t('room.kindsMind'), R.ONLINE_MIND), group(t('room.kindsPuzzle'), R.PUZZLE_KINDS)
+      ]);
+    }
+    function levelEditor(s) {
+      const cur = s.level || 'ramp';
+      return el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.level') }), el('div', { class: 'seg' }, R.ONLINE_LEVELS.map(function (lv) {
+        return UI.button(t('room.level.' + lv), { cls: 'small' + (lv === cur ? ' is-on' : ''), onClick: function () { send({ t: 'room:settings', level: lv }); } });
+      }))]);
+    }
     function inviteUrl(tok, role) { return location.origin + location.pathname + '?room=' + S.room.id + '&inv=' + encodeURIComponent(tok) + '&role=' + role; }
     function copy(text) {
       const done = function () { UI.toast(t('common.copied')); };
@@ -404,12 +428,15 @@
           el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.format') }), fmtBtn]),
           el('p', { class: 'muted', style: 'font-size:.85em', text: t('room.fmtHelp.' + s.format, { c: R.CHIP_START }) }),
           el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.rounds') }), step('rounds', 3, 20, 1, s.rounds)]),
-          el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.timer') }), step('timeSec', 10, 90, 5, s.timeSec)])
+          el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.timer') }), step('timeSec', 10, 90, 5, s.timeSec)]),
+          kindsEditor(s), levelEditor(s)
         ]);
       } else {
         settings = el('div', null, [
           el('div', { class: 'row' }, [el('span', { class: 'badge', text: t('room.fmt.' + s.format) }), el('span', { class: 'badge', text: t('room.rounds') + ' ' + s.rounds }), el('span', { class: 'badge', text: s.timeSec + 's' })]),
-          el('p', { class: 'muted', style: 'font-size:.85em', text: t('room.fmtHelp.' + s.format, { c: R.CHIP_START }) })
+          el('p', { class: 'muted', style: 'font-size:.85em', text: t('room.fmtHelp.' + s.format, { c: R.CHIP_START }) }),
+          el('div', { class: 'label', text: t('room.kinds') + ' ・ ' + t('room.level.' + (s.level || 'ramp')) }),
+          el('div', { class: 'kind-strip left' }, R.cleanOnlineKinds(s.kinds).map(function (k) { return el('span', { class: 'kind-tag' }, [Icon.el(Icon.kind(k)), el('span', { text: t('m.k.' + k) })]); }))
         ]);
       }
       const playUrl = inviteUrl(rm.inv.play, 'play'), specUrl = inviteUrl(rm.inv.spec, 'spec');
