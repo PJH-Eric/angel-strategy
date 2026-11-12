@@ -262,7 +262,8 @@
     function draw() {
       fig.textContent = ''; fig.appendChild(Figure.scale(puzzle, st.assign.some(function (v) { return v == null; }) ? partial() : st.assign, I18N.lang));
       slots.forEach(function (b, i) {
-        b.textContent = R.SHAPES[i] + ' ' + (st.assign[i] == null ? '?' : st.assign[i]);
+        // 圖形顏色與天平圖一致，一眼對得上
+        b.textContent = ''; b.appendChild(el('span', { class: 'shp shp' + i, text: R.SHAPES[i] })); b.appendChild(el('span', { text: ' ' + (st.assign[i] == null ? '?' : st.assign[i]) }));
         b.classList.toggle('is-cur', st.cur === i);
       });
       bagBtns.forEach(function (b, i) { b.classList.toggle('used', st.assign.indexOf(puzzle.bag[i]) !== -1); });

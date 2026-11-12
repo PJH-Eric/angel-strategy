@@ -14,8 +14,11 @@ try { chromium = require('playwright').chromium; } catch (e) { console.log('略�
 const { server } = require('../server.js');
 
 const VIEWS = [
-  ['phone-p', 390, 844, true], ['phone-l', 844, 390, true], ['tablet-p', 820, 1180, true], ['tablet-l', 1180, 820, true], ['desktop', 1440, 900, false]
+  ['phone-s', 360, 640, true], ['phone-p', 390, 844, true], ['phone-l', 844, 390, true], ['tablet-p', 820, 1180, true], ['tablet-l', 1180, 820, true],
+  ['ipad-pro-l', 1366, 1024, true], ['desktop', 1440, 900, false]
 ];
+// --quick 只跑代表性的三種螢幕（開發時用）；預設跑全部
+const QUICK = process.argv.indexOf('--quick') !== -1;
 const shotsDir = process.argv.indexOf('--shots') !== -1 ? process.argv[process.argv.indexOf('--shots') + 1] : null;
 const exe = ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].filter(fs.existsSync)[0];
 
@@ -53,7 +56,7 @@ const CHECK = function () {
   const prog = {}; for (let i = 1; i <= 12; i++) prog[i] = 3;
   const problems = []; const errors = []; let scenes = 0;
   if (shotsDir) fs.mkdirSync(shotsDir, { recursive: true });
-  for (const v of VIEWS) {
+  for (const v of (QUICK ? VIEWS.filter(function (x) { return ['phone-s', 'tablet-p', 'desktop'].indexOf(x[0]) !== -1; }) : VIEWS)) {
     for (const lang of ['zh-TW', 'en']) {
       const ctx = await browser.newContext({ viewport: { width: v[1], height: v[2] }, hasTouch: v[3] });
       await ctx.addInitScript('localStorage.setItem("as.progress.v1", JSON.stringify({baby:' + JSON.stringify(prog) + '}))');
@@ -86,6 +89,14 @@ const CHECK = function () {
         await scene('play-' + kinds[lv - 1], async function () { await pg.evaluate(function (n) { App.go('play', { diff: 'baby', level: n }); }, lv); await pg.waitForSelector('.panel'); });
         await scene('solution-' + kinds[lv - 1], async function () { await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
       }
+      // 神話難度：題目最大（5 位密碼、6 層金字塔、5 個圖形），檢查大題的版面與解法圖
+      for (let lv = 1; lv <= 6; lv++) {
+        await scene('myth-' + kinds[lv - 1], async function () { await pg.evaluate(function (n) { App.go('play', { diff: 'myth', level: n }); }, lv); await pg.waitForSelector('.panel'); });
+        await scene('myth-sol-' + kinds[lv - 1], async function () { await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
+      }
+      // 長結算：魔王關三題、隨機挑戰五題
+      await scene('boss-result', async function () { await pg.evaluate(function () { App.go('play', { diff: 'hard', level: 10 }); }); await pg.waitForSelector('.panel'); await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
+      await scene('random-result', async function () { await pg.evaluate(function () { App.go('play', { mode: 'random', diff: 'myth', seed: 'audit2' }); }); await pg.waitForSelector('.panel'); await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
       await scene('online-lobby', async function () { await pg.evaluate(function () { App.go('online', {}); }); await pg.waitForSelector('.room-card, text=' + (lang === 'en' ? 'New room' : '開新房間'), { timeout: 8000 }).catch(function () {}); });
       await ctx.close();
     }
