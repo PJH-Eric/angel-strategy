@@ -438,3 +438,7 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
 @media (pointer: coarse) and (min-width: 700px) and (orientation: portrait) {
   .play { grid-template-columns: 1fr; }
 }
+.lc-empty { display: grid; justify-items: center; gap: 8px; padding: 28px 10px; color: var(--dim); text-align: center; }
+.lc-empty > .ic { width: 34px; height: 34px; }
+.lc-empty p { margin: 0; }
+.lc-qrow { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }

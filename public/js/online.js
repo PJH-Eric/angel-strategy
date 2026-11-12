@@ -31,7 +31,13 @@
     }
     function redraw() {
       msgsEl.textContent = '';
-      o.msgs().forEach(function (m) { msgsEl.appendChild(line(m)); });
+      const list = o.msgs();
+      list.forEach(function (m) { msgsEl.appendChild(line(m)); });
+      // 沒有訊息時：提示＋一排快捷短語，手指一點就能打招呼
+      if (!list.length) {
+        msgsEl.appendChild(el('div', { class: 'lc-empty' }, [Icon.el('chat'), el('p', { text: t('chat.empty') }),
+          el('div', { class: 'lc-qrow' }, QUICK.slice(0, 4).map(function (k) { return UI.button(t(k), { cls: 'small ghost', onClick: function () { if (!disabledText) o.onSend(t(k)); } }); }))]));
+      }
       sa.sync();
       if (atBottom) sa.view.scrollTop = sa.view.scrollHeight;
     }
@@ -94,6 +100,7 @@
       redraw: draw,
       push: function (m) {
         if (open) {
+          const empty = msgsEl.querySelector('.lc-empty'); if (empty) empty.remove();
           msgsEl.appendChild(line(m)); sa.sync();
           if (atBottom) sa.view.scrollTop = sa.view.scrollHeight;
           else { unread++; newBtn.textContent = t('chat.new', { n: unread }); newBtn.style.display = ''; }
