@@ -719,9 +719,12 @@
         return (B.alive - A.alive) || (kb - ka) || (B.score - A.score);
       });
       const tbl = el('table', { class: 'rtable' }, [el('tr', null, [el('th', { text: '#' }), el('th', { text: '' }), el('th', { text: t('m.score') }), el('th', { text: m.format === 'chips' ? t('m.chips') : '' })])]);
+      // 同分同名次（1、1、3）
+      const keyOf = function (id) { const P = m.players[id]; return (P.alive ? 1 : 0) + ':' + (m.format === 'chips' ? P.chips : P.score) + ':' + P.score; };
+      const rankOf = {}; order.forEach(function (id, i) { rankOf[id] = i > 0 && keyOf(id) === keyOf(order[i - 1]) ? rankOf[order[i - 1]] : i + 1; });
       order.forEach(function (id, i) {
         const win = m.winners.indexOf(id) !== -1;
-        tbl.appendChild(el('tr', { class: win ? 'win' : '' }, [el('td', { text: String(i + 1) }), el('td', { text: nameOf(id) + (win ? ' ★' : '') }), el('td', { class: 'mono', text: String(m.players[id].score) }), el('td', { class: 'mono', text: m.format === 'chips' ? String(m.players[id].chips) : '' })]));
+        tbl.appendChild(el('tr', { class: win ? 'win' : '' }, [el('td', { text: String(rankOf[id]) }), el('td', { text: nameOf(id) + (win ? ' ★' : '') }), el('td', { class: 'mono', text: String(m.players[id].score) }), el('td', { class: 'mono', text: m.format === 'chips' ? String(m.players[id].chips) : '' })]));
       });
       const iWon = m.winners.indexOf(pid) !== -1;
       const host = isHost();
@@ -732,8 +735,8 @@
           S.fresh && S.fresh.length ? el('div', { class: 'ach-strip' }, [el('div', { class: 'label', text: t('ach.unlockedNow') }), el('div', { class: 'row' }, S.fresh.map(function (id) { const a = Records.byId(id); return el('div', { class: 'ach-badge tier-' + (a ? a.tier : 'bronze') }, [Icon.el(a ? a.icon : 'medal'), el('span', { text: t('ach.' + id) })]); }))]) : null,
           UI.button(t('share.open'), { cls: 'small ghost share-open', icon: 'share', onClick: function () {
             Share.open({ title: S.room ? S.room.name : t('home.online'), sub: t('room.fmt.' + m.format), win: iWon, result: t('m.champion') + '：' + m.winners.map(nameOf).join('、'),
-              stats: [[t('m.final'), (order.indexOf(pid) + 1 || '—') + ' / ' + order.length]],
-              lines: order.map(function (id, i) { return [(i + 1) + '. ' + nameOf(id) + (id === pid ? t('chat.me') : ''), String(m.format === 'chips' ? m.players[id].chips + '⛁' : m.players[id].score)]; }),
+              stats: [[t('m.final'), (rankOf[pid] || '—') + ' / ' + order.length]],
+              lines: order.map(function (id) { return [rankOf[id] + '. ' + nameOf(id) + (id === pid ? t('chat.me') : ''), String(m.format === 'chips' ? m.players[id].chips + '⛁' : m.players[id].score)]; }),
               badges: (S.fresh || []).map(function (id) { const a = Records.byId(id); return { name: t('ach.' + id), tier: a ? a.tier : 'bronze' }; }) });
           } })],
         footer: [

@@ -73,7 +73,7 @@ const CHECK = function () {
     }
     return { left: L, top: T, right: R, bottom: B };
   };
-  const scope = document.querySelector('.overlay') || document;
+  const ovs = document.querySelectorAll('.overlay'); const scope = ovs.length ? ovs[ovs.length - 1] : document;   // 最上層的對話框
   const items = [].slice.call(scope.querySelectorAll('.btn, .label, .field input, h3, .chip, .kind-tag, .badge')).filter(function (e) {
     if (e.closest('svg,.lc-bubble,.toast,.menu-pop,.lc-panel')) return false;
     const cs = getComputedStyle(e), r = e.getBoundingClientRect();
@@ -136,6 +136,8 @@ const CHECK = function () {
       }
       // 長結算：魔王關三題、隨機挑戰五題
       await scene('boss-result', async function () { await pg.evaluate(function () { App.go('play', { diff: 'hard', level: 10 }); }); await pg.waitForSelector('.panel'); await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
+      await scene('share-dialog', async function () { await pg.click('.overlay .share-open'); await pg.waitForSelector('.share-img:not([hidden])', { timeout: 15000 }); });
+      await pg.evaluate(function () { document.querySelectorAll('.overlay').forEach(function (o) { o.remove(); }); });
       await scene('random-result', async function () { await pg.evaluate(function () { App.go('play', { mode: 'random', diff: 'myth', seed: 'audit2' }); }); await pg.waitForSelector('.panel'); await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
       await scene('records', async function () { await pg.evaluate(function () { App.go('records', { tab: 'stats' }); }); });
       await scene('achievements', async function () { await pg.evaluate(function () { App.go('records', { tab: 'ach' }); }); });

@@ -267,7 +267,7 @@
         hist.appendChild(el('div', { class: 'rec-row' + (h.win ? ' win' : '') }, [
           el('span', { class: 'mono muted', text: when }), el('span', { class: 'grow', text: mode + (h.diff ? ' ・ ' + t('diff.' + h.diff) : '') }),
           el('span', { class: 'kinds' }, (h.kinds || []).map(function (k) { return Icon.el(Icon.kind(k)); })),
-          el('b', { text: h.win ? t('rec.win') : (h.mode === 'online' ? t('rec.lose') : t('rec.fail')) }), el('span', { class: 'mono muted', text: h.sec ? h.sec.toFixed(1) + 's' : '' })
+          el('b', { text: h.win ? t('rec.win') : (h.mode === 'online' ? t('rec.lose') : (h.why === 'gaveup' ? t('rec.gaveup') : (h.why === 'timeup' ? t('res.timeup') : t('rec.fail')))) }), el('span', { class: 'mono muted', text: h.sec ? h.sec.toFixed(1) + 's' : '' })
         ]));
       });
       host.appendChild(el('div', { class: 'panel' }, [el('h3', { text: t('rec.recent') }), hist]));
