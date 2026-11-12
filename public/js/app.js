@@ -212,7 +212,7 @@
       info.appendChild(el('div', { class: 'kind-strip left' }, today.map(function (pz, i) { return el('span', { class: 'kind-tag' }, [el('b', { class: 'mono', text: String(i + 1) }), Icon.el(Icon.kind(pz.type)), el('span', { text: t('kind.' + pz.type) })]); })));
       info.appendChild(UI.button(t('daily.start'), { cls: 'primary big block', icon: 'play', onClick: function () { go('play', { mode: 'daily', diff: diff, date: date }); } }));
     }
-    ctx.screen.appendChild(UI.scrollArea(el('div', { class: 'stack pad' }, [tabs, info])));
+    ctx.screen.appendChild(UI.scrollArea(el('div', { class: 'stack pad narrow-page' }, [tabs, info])));
     draw();
   };
 
@@ -245,7 +245,7 @@
       info.appendChild(el('div', { class: 'kind-strip left' }, R.PUZZLE_KINDS.map(function (k) { return el('span', { class: 'kind-tag' }, [Icon.el(Icon.kind(k)), el('span', { text: t('kind.' + k) })]); })));
       info.appendChild(UI.button(t('rand.start'), { cls: 'primary big block', icon: 'dice', onClick: function () { go('play', { mode: 'random', diff: diff, seed: newSeed() }); } }));
     }
-    ctx.screen.appendChild(UI.scrollArea(el('div', { class: 'stack pad' }, [tabs, info])));
+    ctx.screen.appendChild(UI.scrollArea(el('div', { class: 'stack pad narrow-page' }, [tabs, info])));
     draw();
   };
 
@@ -305,6 +305,8 @@
       S.widget = Puzzle.mount(pz, o);
       const left = el('div', { class: 'panel' }, [S.widget.cluesEl]);
       const right = el('div', { class: 'panel' }, [S.widget.entryEl]);
+      // 以圖為主的題型（天平、金字塔）：圖那一欄放寬
+      body.classList.toggle('fig-main', pz.type === 'scale' || pz.type === 'pyramid');
       body.appendChild(left); body.appendChild(right);
       drawHintBox();
       drawActions();

@@ -492,3 +492,9 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
   #app::after { display: none; }
 }
 .lobby-top .lobby-name { min-width: 170px; }
+/* 桌機與橫向平板：說明型頁面不要拉得過寬；以圖為主的題型讓圖拿到較寬的一欄 */
+.narrow-page { max-width: 860px; margin: 0 auto; width: 100%; }
+@media (min-width: 900px) {
+  .play.fig-main { grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); }
+  .play.fig-main .fig-wrap svg.figure { max-width: 640px !important; }
+}

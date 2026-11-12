@@ -309,7 +309,7 @@
     const cluesEl = el('div', null, [fig, el('p', { class: 'muted', style: 'font-size:.85em', text: t('play.pyrHelp') })]);
     const glyph = { '+': '＋', '-': '−', '*': '×' };
     const rowsEl = el('div', { class: 'stack' });
-    const btns = [];
+    const btns = [], rowEls = [];
     for (let l = 0; l < puzzle.n - 1; l++) (function (l) {
       const row = el('div', { class: 'row', style: 'justify-content:center;align-items:center' }, [el('span', { class: 'label', style: 'min-width:4.5em', text: t('play.pyrLevel', { n: l + 1 }) })]);
       const group = [];
@@ -317,7 +317,8 @@
         const b = UI.button(glyph[o], { cls: 'num', onClick: function () { st.ops[l] = o; Audio2.sfx('key'); draw(); } });
         group.push({ o: o, b: b }); row.appendChild(b);
       });
-      btns.push(group); rowsEl.appendChild(row);
+      // 由上到下排成「最高層 → 第 1 層」，和金字塔圖的位置一致
+      btns.push(group); rowEls.push(row); rowsEl.insertBefore(row, rowsEl.firstChild);
     })(l);
     const act = el('div', { class: 'row', style: 'justify-content:center' }, [
       UI.button(t('play.clear'), { cls: 'ghost', onClick: function () { st.ops = new Array(puzzle.n - 1).fill(null); draw(); } }),
@@ -341,7 +342,7 @@
     function cycle(l) { const i = puzzle.ops.indexOf(st.ops[l]); st.ops[l] = puzzle.ops[(i + 1) % puzzle.ops.length]; Audio2.sfx('key'); draw(); }
     function draw() {
       fig.textContent = ''; fig.appendChild(Figure.pyramid(puzzle, st.ops, I18N.lang, cycle));
-      btns.forEach(function (g, l) { g.forEach(function (x) { x.b.classList.toggle('is-on', st.ops[l] === x.o); }); rowsEl.children[l].classList.toggle('is-cur', kl === l); });
+      btns.forEach(function (g, l) { g.forEach(function (x) { x.b.classList.toggle('is-on', st.ops[l] === x.o); }); rowEls[l].classList.toggle('is-cur', kl === l); });
       if (opts.onChange) opts.onChange(st);
     }
     function submit() {
