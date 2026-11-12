@@ -637,7 +637,7 @@
         const puzzle = cur.puzzle;
         const o = { onSubmit: function (ans) { if (canAct() && !S.solved) send({ t: 'm:solve', answer: ans }); } };
         widget = Puzzle.mount(puzzle, o);
-        const grid = el('div', { class: 'play' }, [el('div', { class: 'panel' }, [widget.cluesEl]), el('div', { class: 'panel' }, [widget.entryEl])]);
+        const grid = el('div', { class: 'play' + (puzzle.type === 'scale' || puzzle.type === 'pyramid' ? ' fig-main' : '') }, [el('div', { class: 'panel' }, [widget.cluesEl]), el('div', { class: 'panel' }, [widget.entryEl])]);
         if (!act) grid.style.opacity = '.55';
         M.content.appendChild(grid);
       }
