@@ -14,7 +14,7 @@ t('種子亂數可重現', () => {
   for (let i = 0; i < 20; i++) assert.strictEqual(a(), b());
 });
 
-t('五段難度 × 50 關：每題可產生、推理題唯一解、算式題解法正確、且都有解法說明', () => {
+t('五段難度 × 200 關：每題可產生、推理題唯一解、算式題解法正確、且都有解法說明', () => {
   R.DIFFS.forEach((diff) => {
     for (let lv = 1; lv <= R.LEVELS_PER_DIFF; lv++) {
       const ps = R.levelPuzzles(diff, lv);
@@ -46,6 +46,21 @@ t('每日挑戰同一天同難度結果相同、不同天不同', () => {
   assert.notDeepStrictEqual(a, c);
   assert.strictEqual(a.length, 4);
   assert.strictEqual(new Set(a.map((p) => p.type)).size, 4, '每日四題型別不重複');
+});
+
+t('隨機挑戰：同一種子結果相同、不同種子不同；5 題型別不重複且解法成立', () => {
+  R.DIFFS.forEach((d) => {
+    const a = R.randomPuzzles('seedA', d), b = R.randomPuzzles('seedA', d), c = R.randomPuzzles('seedB', d);
+    assert.deepStrictEqual(a, b);
+    assert.notDeepStrictEqual(a, c);
+    assert.strictEqual(a.length, R.RANDOM_COUNT);
+    assert.strictEqual(new Set(a.map((p) => p.type)).size, R.RANDOM_COUNT);
+    a.forEach((p) => assert.ok(R.checkPuzzle(p, p.solution).ok));
+  });
+  assert.strictEqual(R.randomTimeLimitSec('baby'), null);
+  assert.strictEqual(R.randomTimeLimitSec('normal'), 120 * R.RANDOM_COUNT);
+  const sigs = new Set(); for (let i = 0; i < 30; i++) sigs.add(JSON.stringify(R.randomPuzzles('s' + i, 'hard')));
+  assert.strictEqual(sigs.size, 30, '30 個不同種子要出 30 組不同題目');
 });
 
 t('台北時間切日', () => {

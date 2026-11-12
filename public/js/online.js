@@ -42,7 +42,7 @@
     const newBtn = UI.button('', { cls: 'small primary lc-new', onClick: function () { atBottom = true; sa.view.scrollTop = sa.view.scrollHeight; unread = 0; newBtn.style.display = 'none'; } });
     newBtn.style.display = 'none';
 
-    const input = UI.input({ placeholder: t('chat.ph'), max: 60, label: t('chat.ph') });
+    const input = UI.input({ placeholder: t('chat.ph'), max: 60, label: t('chat.ph'), hideLabel: true });
     function submit() {
       const v = input.input.value.trim();
       if (!v || disabledText) return;
@@ -54,7 +54,7 @@
     } });
     const title = el('b');
     const closeBtn = UI.button('', { cls: 'small ghost icon', icon: 'close', aria: t('common.close'), onClick: function () { setOpen(false); } });
-    const head = el('header', null, [title, o.onRename ? UI.button('✎', { cls: 'small ghost icon', aria: t('chat.rename'), onClick: o.onRename }) : null, closeBtn]);
+    const head = el('header', null, [title, o.onRename ? UI.button('', { cls: 'small ghost icon', icon: 'edit', aria: t('chat.rename'), onClick: o.onRename }) : null, closeBtn]);
     const panel = el('div', { class: 'lc-panel', role: 'dialog', 'aria-label': t('chat.title') }, [
       head, el('div', { class: 'lc-body' }, [sa, newBtn]),
       el('div', { class: 'lc-input' }, [quickBtn, input, UI.button(t('chat.send'), { cls: 'small primary', onClick: submit })])
@@ -298,7 +298,7 @@
     /* 大廳 */
     let roomsHost = null;
     function renderLobby() {
-      const nameBtn = UI.button('✎ ' + S.name, { cls: 'ghost small', onClick: renameModal });
+      const nameBtn = UI.button(S.name, { cls: 'ghost small', icon: 'edit', onClick: renameModal });
       roomsHost = el('div', { class: 'room-list' });
       const top = el('div', { class: 'row' }, [
         el('div', { class: 'grow' }, [el('div', { class: 'label', text: t('on.name') }), nameBtn]),
@@ -410,7 +410,7 @@
         el('div', { class: 'row' }, [UI.button(t('common.copy') + ' ' + t('on.join'), { cls: 'small', icon: 'link', onClick: function () { copy(playUrl); } }), UI.button(t('common.copy') + ' ' + t('on.watch'), { cls: 'small ghost', icon: 'eye', onClick: function () { copy(specUrl); } }), host ? UI.button(t('room.revoke'), { cls: 'small ghost danger', onClick: function () { send({ t: 'room:revoke' }); } }) : null])
       ]);
       const mine = rm.players.some(function (p) { return p.pid === pid; });
-      const actions = el('div', { class: 'row' });
+      const actions = el('div', { class: 'row room-actions' });
       if (host && rm.state === 'room') actions.appendChild(UI.button(t('room.start'), { cls: 'primary big grow', disabled: rm.players.length < 2, onClick: function () { send({ t: 'room:start' }); } }));
       else if (rm.state === 'room') actions.appendChild(el('span', { class: 'muted', text: t('room.waitStart') }));
       else actions.appendChild(el('span', { class: 'muted', text: t('m.waitHost') }));

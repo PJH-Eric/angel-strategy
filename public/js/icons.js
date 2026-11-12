@@ -45,6 +45,8 @@
     retry: '<path d="M19 12a7 7 0 1 1-2.1-5"/><path class="ic-a" d="M19 4v4.5h-4.5"/>',
     room: '<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M4 9h16"/><path class="ic-a" d="M8 13h3M8 16h6"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
+    edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path class="ic-a" d="m13.5 6.5 4 4"/>',
+    dice: '<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><circle class="ic-f" cx="8.2" cy="8.2" r="1.5"/><circle class="ic-f" cx="15.8" cy="8.2" r="1.5"/><circle class="ic-f" cx="12" cy="12" r="1.5"/><circle class="ic-f" cx="8.2" cy="15.8" r="1.5"/><circle class="ic-f" cx="15.8" cy="15.8" r="1.5"/>',
     bolt: '<path d="M13.5 3 5 13.5h6.5L10.5 21 19 10.5h-6.5z"/><path class="ic-a" d="M11.5 13.5 10.5 21"/>',
     send: '<path d="m4 12 16-7-6 16-2.5-6.5z"/><path class="ic-a" d="m11.5 14.5 3.5-3.5"/>',
     hint: '<circle cx="12" cy="12" r="8.5"/><path class="ic-a" d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 1-1 1.7v.5"/><circle class="ic-f" cx="12" cy="17" r="1"/>',

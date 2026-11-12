@@ -390,3 +390,14 @@ svg.figure { width: 100%; height: auto; display: block; background: #0b1014; bor
 .lobby-link .ic { width: 18px; height: 18px; }
 .topbar.is-home .title { visibility: hidden; }
 @media (max-width: 360px) { .lobby-link .ll-tx { display: none; } .lobby-link { width: 44px; padding: 0; } }
+/* 左下聊天氣泡不可蓋住房間底部按鈕 */
+@media (max-width: 900px) { .room-actions { padding-left: 68px; } }
+.lc-input .field { flex: 1; min-width: 0; }
+.jump-row { gap: 6px; flex-wrap: wrap; }
+.jump-row .btn { font-family: var(--mono); }
+/* 矮的橫向螢幕（手機橫拿）：首頁按鈕排兩欄，一眼看完不用捲 */
+@media (orientation: landscape) and (max-height: 520px) {
+  .home .menu { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 640px; width: 100%; }
+  .home .menu .btn.big { min-height: 48px; padding: 8px 16px; }
+  .home .menu .btn:last-child { grid-column: 1 / -1; }
+}

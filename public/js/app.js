@@ -117,6 +117,7 @@
       el('div', { class: 'menu' }, [
         UI.button(t('home.campaign'), { cls: 'primary big block', icon: 'solo', onClick: function () { go('campaign'); } }),
         UI.button(t('home.daily'), { cls: 'big block', icon: 'daily', onClick: function () { go('daily'); } }),
+        UI.button(t('home.random'), { cls: 'big block', icon: 'dice', onClick: function () { go('random'); } }),
         UI.button(t('home.online'), { cls: 'big block', icon: 'online', onClick: function () { go('online'); } }),
         UI.button(t('home.how'), { cls: 'ghost block', icon: 'book', onClick: openHow })
       ]),
@@ -158,8 +159,17 @@
       }
       gridHost.textContent = '';
       gridHost.appendChild(UI.scrollArea(grid, { label: t('camp.title') }));
+      // 跳到區段／目前進度（200 關不用一直往下滑）
+      let cur = 1;
+      while (cur < R.LEVELS_PER_DIFF && Store.stars(diff, cur) > 0) cur++;
+      const toLv = function (lv, smooth) { const tile = grid.children[lv - 1]; if (tile) tile.scrollIntoView({ block: lv === 1 ? 'start' : 'center', behavior: smooth ? 'smooth' : 'auto' }); };
+      jump.textContent = '';
+      jump.appendChild(UI.button(t('camp.current') + ' ' + cur, { cls: 'small primary', icon: 'flag', onClick: function () { toLv(cur, true); } }));
+      for (let a = 1; a <= R.LEVELS_PER_DIFF; a += 50) (function (a) { jump.appendChild(UI.button(a + '–' + Math.min(R.LEVELS_PER_DIFF, a + 49), { cls: 'small ghost', onClick: function () { toLv(a, true); } })); })(a);
+      requestAnimationFrame(function () { toLv(cur, false); });
     }
-    ctx.screen.appendChild(el('div', { class: 'stack pad', style: 'flex:1;min-height:0' }, [tabs, sub, gridHost]));
+    const jump = el('div', { class: 'row jump-row', role: 'group', 'aria-label': t('camp.jump') });
+    ctx.screen.appendChild(el('div', { class: 'stack pad', style: 'flex:1;min-height:0' }, [tabs, sub, jump, gridHost]));
     draw();
   };
 
@@ -193,18 +203,53 @@
     draw();
   };
 
-  /* ---------- 單機遊玩（闖關與每日共用） ---------- */
+  /* ---------- 隨機挑戰 ---------- */
+  function newSeed() {
+    try { const a = new Uint32Array(2); crypto.getRandomValues(a); return a[0].toString(36) + a[1].toString(36); }
+    catch (e) { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+  }
+  App.newSeed = newSeed;
+  App.screens.random = function (ctx, p) {
+    let diff = p.diff || 'normal';
+    ctx.setTitle(t('rand.title'));
+    ctx.setBack(function () { go('home'); });
+    const tabs = el('div', { class: 'tabs' });
+    const info = el('div', { class: 'panel stack' });
+    function draw() {
+      tabs.textContent = '';
+      R.DIFFS.forEach(function (d) { tabs.appendChild(UI.button(t('diff.' + d), { cls: 'tab small' + (d === diff ? ' is-on' : ''), onClick: function () { diff = d; draw(); } })); });
+      const st = Store.randomStat(diff), lim = R.randomTimeLimitSec(diff), hc = R.hintLimit(diff);
+      info.textContent = '';
+      info.appendChild(el('h3', { class: 'kind-h' }, [Icon.el('dice'), el('span', { text: t('rand.title') + ' ・ ' + t('diff.' + diff) })]));
+      info.appendChild(el('p', { class: 'muted', style: 'margin:0', text: t('rand.sub', { n: R.RANDOM_COUNT }) }));
+      info.appendChild(el('div', { class: 'row' }, [
+        el('span', { class: 'badge', text: t('daily.count', { n: R.RANDOM_COUNT }) }),
+        el('span', { class: 'badge', text: lim ? lim + 's' : '∞' }),
+        el('span', { class: 'badge', text: t('play.hints') + ' ' + (hc === Infinity ? '∞' : hc) }),
+        el('span', { class: 'badge', text: t('rand.runs', { n: st.runs, w: st.wins }) }),
+        st.best != null ? el('span', { class: 'badge', style: 'border-color:var(--green);color:var(--green)', text: t('daily.best', { s: st.best.toFixed(2) }) }) : null
+      ]));
+      info.appendChild(el('div', { class: 'kind-strip left' }, R.PUZZLE_KINDS.map(function (k) { return el('span', { class: 'kind-tag' }, [Icon.el(Icon.kind(k)), el('span', { text: t('kind.' + k) })]); })));
+      info.appendChild(UI.button(t('rand.start'), { cls: 'primary big block', icon: 'dice', onClick: function () { go('play', { mode: 'random', diff: diff, seed: newSeed() }); } }));
+    }
+    ctx.screen.appendChild(UI.scrollArea(el('div', { class: 'stack pad' }, [tabs, info])));
+    draw();
+  };
+
+  /* ---------- 單機遊玩（闖關、每日、隨機共用） ---------- */
   App.screens.play = function (ctx, p) {
-    const daily = p.mode === 'daily';
+    const daily = p.mode === 'daily', rnd = p.mode === 'random', camp = !daily && !rnd;
     const diff = p.diff;
-    const puzzles = daily ? R.dailyPuzzles(p.date, diff) : R.levelPuzzles(diff, p.level);
-    const limit = daily ? R.dailyTimeLimitSec(diff) : R.timeLimitSec(diff, p.level);
+    const puzzles = daily ? R.dailyPuzzles(p.date, diff) : (rnd ? R.randomPuzzles(p.seed, diff) : R.levelPuzzles(diff, p.level));
+    const limit = daily ? R.dailyTimeLimitSec(diff) : (rnd ? R.randomTimeLimitSec(diff) : R.timeLimitSec(diff, p.level));
+    const modeTitle = daily ? t('daily.title') : (rnd ? t('rand.title') : t('camp.level', { n: p.level }));
+    const backTo = daily ? 'daily' : (rnd ? 'random' : 'campaign');
     const hintCap = R.hintLimit(diff);
     const S = { idx: 0, hints: 0, ph: 0, tries: 0, elapsed: 0, last: performance.now(), paused: false, ended: false, hintMsgs: [], widget: null, wstate: null };
     const gaKey = 'solo:' + Date.now();
-    try { if (window.GameAnalytics) GameAnalytics.start({ mode: 'solo', difficulty: diff, variant: daily ? 'daily' : 'campaign' }, gaKey); } catch (e) { /* ignore */ }
+    try { if (window.GameAnalytics) GameAnalytics.start({ mode: 'solo', difficulty: diff, variant: daily ? 'daily' : (rnd ? 'random' : 'campaign') }, gaKey); } catch (e) { /* ignore */ }
     let timer = null;
-    ctx.setTitle(daily ? t('daily.title') : t('camp.level', { n: p.level }), t('diff.' + diff));
+    ctx.setTitle(modeTitle, t('diff.' + diff));
 
     const hud = el('div', { class: 'hud' });
     const body = el('div', { class: 'play' });
@@ -219,7 +264,7 @@
       hud.textContent = '';
       const chip = function (k, v, ic, cls, vcls) { return el('div', { class: 'chip ' + (cls || '') }, [Icon.el(ic, 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { class: vcls || '', text: v }), el('span', { text: t(k) })])]); };
       const pz0 = puzzles[S.idx];
-      hud.appendChild(el('div', { class: 'chip kind' }, [Icon.el(Icon.kind(pz0.type), 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { text: t('kind.' + pz0.type) }), el('span', { text: daily ? t('daily.title') : t('camp.level', { n: p.level }) })])]));
+      hud.appendChild(el('div', { class: 'chip kind' }, [Icon.el(Icon.kind(pz0.type), 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { text: t('kind.' + pz0.type) }), el('span', { text: modeTitle })])]));
       hud.appendChild(chip('play.step', (S.idx + 1) + '/' + puzzles.length, 'stack'));
       hud.appendChild(chip('play.time', rem == null ? (S.elapsed / 1000).toFixed(0) + 's' : Math.ceil(rem) + 's', 'clock', rem != null && rem <= 10 ? 'warn' : '', 'tm'));
       hud.appendChild(chip('play.hints', hintCap === Infinity ? '∞' : String(Math.max(0, hintCap - S.hints)), 'bulb'));
@@ -299,7 +344,7 @@
 
     function exit() {
       stop();
-      go(daily ? 'daily' : 'campaign', { diff: diff });
+      go(backTo, { diff: diff });
     }
     function stop() { S.ended = true; clearInterval(timer); if (S.widget) { S.widget.destroy(); S.widget = null; } }
 
@@ -313,24 +358,26 @@
       let stars = 0;
       if (win) {
         if (daily) Store.setDaily(p.date, diff, usedSec);
+        else if (rnd) { /* 隨機挑戰統計在下方 */ }
         else { stars = R.starsFor(diff, p.level, usedSec, S.hints); Store.setStars(diff, p.level, stars); }
       }
+      if (rnd) Store.addRandomRun(diff, win ? usedSec : null);
       Audio2.sfx(win ? 'win' : 'lose'); Audio2.vibrate(win ? [40, 40, 40] : 200);
       const body2 = [
         el('h3', { class: 'result-title ' + (win ? 'win' : 'lose'), text: win ? t('res.clear') : (why === 'timeup' ? t('res.timeup') : t('res.gaveup')) }),
         el('div', { class: 'row' }, [
           el('span', { class: 'badge', text: t('res.time', { s: usedSec.toFixed(2) }) }),
           el('span', { class: 'badge', text: t('res.hintsUsed', { n: S.hints }) }),
-          win && !daily ? el('span', { class: 'badge', style: 'color:var(--amber)', text: UI.stars(stars) }) : null
+          win && camp ? el('span', { class: 'badge', style: 'color:var(--amber)', text: UI.stars(stars) }) : null
         ])
       ];
       puzzles.forEach(function (pz, i) { body2.push(Puzzle.solutionView(pz, puzzles.length > 1 ? t('res.puzzleN', { n: i + 1 }) : '')); });
       const foot = [];
-      foot.push(UI.button(t('common.again'), { cls: 'primary', icon: 'retry', onClick: function () { m.close(); go('play', p); } }));
-      if (win && !daily && p.level < R.LEVELS_PER_DIFF) foot.push(UI.button(t('common.next'), { cls: 'primary', icon: 'play', onClick: function () { m.close(); go('play', { mode: 'campaign', diff: diff, level: p.level + 1 }); } }));
-      foot.push(UI.button(daily ? t('common.back') : t('common.levelList'), { cls: 'ghost', icon: daily ? 'daily' : 'stack', onClick: function () { m.close(); go(daily ? 'daily' : 'campaign', { diff: diff }); } }));
+      foot.push(UI.button(rnd ? t('rand.again') : t('common.again'), { cls: 'primary', icon: rnd ? 'dice' : 'retry', onClick: function () { m.close(); go('play', rnd ? { mode: 'random', diff: diff, seed: newSeed() } : p); } }));
+      if (win && camp && p.level < R.LEVELS_PER_DIFF) foot.push(UI.button(t('common.next'), { cls: 'primary', icon: 'play', onClick: function () { m.close(); go('play', { mode: 'campaign', diff: diff, level: p.level + 1 }); } }));
+      foot.push(UI.button(camp ? t('common.levelList') : t('common.back'), { cls: 'ghost', icon: daily ? 'daily' : (rnd ? 'dice' : 'stack'), onClick: function () { m.close(); go(backTo, { diff: diff }); } }));
       foot.push(UI.button(t('common.home'), { cls: 'ghost', icon: 'home', onClick: function () { m.close(); go('home'); } }));
-      const m = UI.modal({ title: daily ? t('daily.title') : t('camp.level', { n: p.level }), body: body2, footer: foot, closable: false });
+      const m = UI.modal({ title: modeTitle, body: body2, footer: foot, closable: false });
     }
 
     ctx.setBack(function () {

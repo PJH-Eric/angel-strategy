@@ -1,7 +1,7 @@
 /* 本機存檔：設定、闖關進度、每日挑戰紀錄、暱稱。所有讀寫都包 try/catch。 */
 (function () {
   'use strict';
-  const K = { settings: 'as.settings.v1', progress: 'as.progress.v1', daily: 'as.daily.v1', name: 'as.name.v1', chatOpen: 'as.chatopen.v1', pid: 'as.pid.v1' };
+  const K = { settings: 'as.settings.v1', progress: 'as.progress.v1', daily: 'as.daily.v1', name: 'as.name.v1', chatOpen: 'as.chatopen.v1', pid: 'as.pid.v1', random: 'as.random.v1' };
   const DEFAULT_SETTINGS = { bgm: true, sfx: true, bgmVol: 0.5, sfxVol: 0.8, vibrate: true, reduce: false, lobbyChat: true };
   function read(k, fb) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } }
   function write(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } }
@@ -37,6 +37,16 @@
       const keys = Object.keys(Store.daily).sort();
       while (keys.length > 60) delete Store.daily[keys.shift()];
       write(K.daily, Store.daily);
+    },
+
+    /* 隨機挑戰：{ diff: { best, runs, wins } } */
+    random: read(K.random, {}),
+    randomStat: function (diff) { return Store.random[diff] || { best: null, runs: 0, wins: 0 }; },
+    addRandomRun: function (diff, winSec) {
+      const r = Store.randomStat(diff);
+      r.runs++;
+      if (winSec != null) { r.wins++; if (r.best == null || winSec < r.best) r.best = winSec; }
+      Store.random[diff] = r; write(K.random, Store.random);
     },
 
     /* 暱稱：沒有就用「形容詞＋小動物」 */

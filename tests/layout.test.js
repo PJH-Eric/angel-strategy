@@ -77,6 +77,8 @@ const CHECK = function () {
       await scene('campaign', async function () { await pg.evaluate(function () { App.go('campaign', { diff: 'baby' }); }); });
       if (await pg.evaluate(function () { return !!document.querySelector('.lobby-link'); })) problems.push(v[0] + '/' + lang + '/campaign：回遊戲大廳按鈕只應出現在首頁');
       await scene('daily', async function () { await pg.evaluate(function () { App.go('daily', { diff: 'normal' }); }); });
+      await scene('random', async function () { await pg.evaluate(function () { App.go('random', { diff: 'hard' }); }); });
+      await scene('play-random', async function () { await pg.evaluate(function () { App.go('play', { mode: 'random', diff: 'hard', seed: 'audit' }); }); await pg.waitForSelector('.panel'); });
       const kinds = ['deduce', 'arith', 'pyramid', 'rule', 'near', 'scale'];
       for (let lv = 1; lv <= 6; lv++) {
         await scene('play-' + kinds[lv - 1], async function () { await pg.evaluate(function (n) { App.go('play', { diff: 'baby', level: n }); }, lv); await pg.waitForSelector('.panel'); });

@@ -11,7 +11,7 @@
   'use strict';
 
   const DIFFS = ['baby', 'easy', 'normal', 'hard', 'myth'];
-  const LEVELS_PER_DIFF = 50;
+  const LEVELS_PER_DIFF = 200;
   const BOSS_EVERY = 10;
   const FORMATS = ['chips', 'elimination', 'points'];
   const NUM_MODES = ['avg', 'lowunique', 'highunique'];
@@ -430,6 +430,17 @@
     // 每天從六種題型中抽 4 種不重複的題
     return rand.shuffle(PUZZLE_KINDS).slice(0, 4).map(function (k, i) { return buildPuzzle(k, rand, diff, 1 + (i > 2 ? 1 : 0)); });
   }
+  /* ---------- 隨機挑戰：每次開局重新出題（種子由前端隨機產生） ---------- */
+  const RANDOM_COUNT = 5;
+  function randomPuzzles(seed, diff) {
+    const rand = makeRng('rand:' + seed + ':' + diff);
+    // 六種題型隨機抽 5 種不重複，每題的階層也隨機，讓每一局手感不同
+    return rand.shuffle(PUZZLE_KINDS).slice(0, RANDOM_COUNT).map(function (k) { return buildPuzzle(k, rand, diff, rand.int(0, 6)); });
+  }
+  function randomTimeLimitSec(diff) {
+    const base = TIME_BASE[diff];
+    return base == null ? null : base * RANDOM_COUNT;
+  }
   function dailyTimeLimitSec(diff) {
     const base = TIME_BASE[diff];
     return base == null ? null : base * 4;   // 每日四題
@@ -628,6 +639,7 @@
     isBoss: isBoss, levelKind: levelKind, tierOf: tierOf, timeLimitSec: timeLimitSec, hintLimit: hintLimit,
     levelPuzzles: levelPuzzles, starsFor: starsFor,
     taipeiDate: taipeiDate, dailyPuzzles: dailyPuzzles, dailyTimeLimitSec: dailyTimeLimitSec,
+    RANDOM_COUNT: RANDOM_COUNT, randomPuzzles: randomPuzzles, randomTimeLimitSec: randomTimeLimitSec,
     pointsForRank: pointsForRank, rankByKey: rankByKey, numGameParams: numGameParams, resolveNumGame: resolveNumGame, resolveRace: resolveRace,
     registry: registry, PUZZLE_KINDS: PUZZLE_KINDS, checkPuzzle: checkPuzzle, explainPuzzle: explainPuzzle, hintPuzzle: hintPuzzle, BANK_START: BANK_START,
     buildRoundPlan: buildRoundPlan, publicPuzzle: publicPuzzle,

@@ -112,7 +112,7 @@
     opts = opts || {};
     const i = el('input', { type: 'text', maxlength: opts.max || 40, placeholder: opts.placeholder || '', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', 'aria-label': opts.label || opts.placeholder || null, value: opts.value || '' });
     i.value = opts.value || '';
-    const f = el('label', { class: 'field' }, [opts.label ? el('span', { class: 'label', text: opts.label }) : null, i]);
+    const f = el('label', { class: 'field' }, [opts.label && !opts.hideLabel ? el('span', { class: 'label', text: opts.label }) : null, i]);
     f.input = i;
     return f;
   }
