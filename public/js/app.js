@@ -132,7 +132,7 @@
         UI.button(t('home.daily'), { cls: 'big block', icon: 'daily', onClick: function () { go('daily'); } }),
         UI.button(t('home.random'), { cls: 'big block', icon: 'dice', onClick: function () { go('random'); } }),
         UI.button(t('home.online'), { cls: 'big block', icon: 'online', onClick: function () { go('online'); } }),
-        UI.button(t('home.how'), { cls: 'ghost block', icon: 'book', onClick: openHow })
+        el('div', { class: 'menu-pair' }, [UI.button(t('home.records'), { cls: 'ghost block', icon: 'medal', onClick: function () { go('records'); } }), UI.button(t('home.how'), { cls: 'ghost block', icon: 'book', onClick: openHow })])
       ]),
       el('div', { class: 'kind-strip', 'aria-label': t('home.foot') }, R.PUZZLE_KINDS.map(function (k) { return el('span', { class: 'kind-tag' }, [Icon.el(Icon.kind(k)), el('span', { text: t('kind.' + k) })]); })),
       el('p', { class: 'home-foot', text: t('home.foot') })
@@ -151,7 +151,9 @@
     function draw() {
       tabs.textContent = '';
       R.DIFFS.forEach(function (d) {
-        const b = UI.button(t('diff.' + d) + ' ' + Store.cleared(d) + '/' + R.LEVELS_PER_DIFF, { cls: 'tab small' + (d === diff ? ' is-on' : ''), onClick: function () { diff = d; draw(); } });
+        // 難度名稱與進度分兩行，小手機五個分頁也放得下
+        const b = UI.button('', { cls: 'tab small tab2' + (d === diff ? ' is-on' : ''), aria: t('diff.' + d) + ' ' + Store.cleared(d) + '/' + R.LEVELS_PER_DIFF, onClick: function () { diff = d; draw(); } });
+        b.appendChild(el('span', { text: t('diff.' + d) })); b.appendChild(el('small', { text: Store.cleared(d) + '/' + R.LEVELS_PER_DIFF }));
         tabs.appendChild(b);
       });
       sub.textContent = t('camp.sub');
@@ -216,6 +218,87 @@
     draw();
   };
 
+  /* ---------- 成就：解鎖通知與徽章 ---------- */
+  function badge(id, opts) {
+    const a = Records.byId(id); if (!a) return null;
+    return el('div', { class: 'ach-badge tier-' + a.tier + (opts && opts.locked ? ' locked' : '') }, [Icon.el(a.icon), el('span', { text: t('ach.' + id) })]);
+  }
+  function achStrip(ids) {
+    return el('div', { class: 'ach-strip' }, [el('div', { class: 'label', text: t('ach.unlockedNow') }), el('div', { class: 'row' }, ids.map(function (id) { return badge(id); }))]);
+  }
+  App.onAchieve = function (ids) {
+    // 一次合併成一則通知，不要疊滿畫面（結算畫面另外會列出徽章）
+    if (ids.length) setTimeout(function () { UI.toast(t('ach.toast', { n: ids.map(function (id) { return t('ach.' + id); }).join('、') })); }, 300);
+  };
+
+  /* ---------- 紀錄與成就 ---------- */
+  App.screens.records = function (ctx, p) {
+    let tab = p.tab || 'stats';
+    ctx.setTitle(t('rec.title'));
+    ctx.setBack(function () { go('home'); });
+    const tabs = el('div', { class: 'tabs' });
+    const host = el('div', { class: 'stack' });
+    const fmtS = function (sec) { if (!sec) return '0' + t('rec.min'); const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60); return h ? t('rec.hm', { h: h, m: m }) : m + t('rec.min'); };
+    function card(icon, label, value, sub) { return el('div', { class: 'rec-card' }, [Icon.el(icon), el('div', null, [el('span', { class: 'muted', text: label }), el('b', { text: value }), sub ? el('small', { class: 'muted', text: sub }) : null])]); }
+    function drawStats() {
+      const s = Store.rec(), stars = R.DIFFS.reduce(function (a, d) { return a + Object.keys(Store.progress[d] || {}).reduce(function (b, k) { return b + (Store.progress[d][k] || 0); }, 0); }, 0);
+      const st = Records.streaks(s.daily), cur = Records.currentStreak(s, R.taipeiDate());
+      const ran = R.DIFFS.reduce(function (a, d) { const r = Store.randomStat(d); a.runs += r.runs; a.wins += r.wins; return a; }, { runs: 0, wins: 0 });
+      host.appendChild(el('div', { class: 'rec-grid' }, [
+        card('target', t('rec.solved'), String(Records.totalSolved(s))),
+        card('flag', t('rec.clears'), String(s.clears), t('rec.noHint', { n: s.noHint })),
+        card('star', t('rec.stars'), String(stars), t('rec.boss', { n: s.boss })),
+        card('daily', t('rec.streak'), t('rec.days', { n: cur }), t('rec.bestStreak', { n: st.best })),
+        card('dice', t('rand.title'), ran.wins + ' / ' + ran.runs, t('rec.winsRuns')),
+        card('online', t('home.online'), s.online.wins + ' / ' + s.online.matches, t('rec.winsMatches')),
+        card('clock', t('rec.time'), fmtS(s.totalSec)),
+        card('medal', t('ach.title'), Object.keys(s.unlocked).length + ' / ' + Records.LIST.length)
+      ]));
+      const tbl = el('div', { class: 'rec-kinds' });
+      Records.KINDS.forEach(function (k) {
+        tbl.appendChild(el('div', { class: 'rec-kind' }, [Icon.el(Icon.kind(k)), el('span', { class: 'grow', text: t('kind.' + k) }), el('b', { class: 'mono', text: t('rec.nSolved', { n: s.solved[k] || 0 }) }), el('span', { class: 'mono muted', text: s.best[k] != null ? t('rec.bestSec', { s: s.best[k].toFixed(2) }) : '—' })]));
+      });
+      host.appendChild(el('div', { class: 'panel' }, [el('h3', { text: t('rec.byKind') }), tbl]));
+      const hist = el('div', { class: 'rec-hist' });
+      if (!s.history.length) hist.appendChild(el('p', { class: 'muted', text: t('rec.empty') }));
+      s.history.forEach(function (h) {
+        const d = new Date(h.at), when = (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        const mode = h.mode === 'campaign' ? t('camp.level', { n: h.level }) : (h.mode === 'daily' ? t('daily.title') : (h.mode === 'random' ? t('rand.title') : t('home.online')));
+        hist.appendChild(el('div', { class: 'rec-row' + (h.win ? ' win' : '') }, [
+          el('span', { class: 'mono muted', text: when }), el('span', { class: 'grow', text: mode + (h.diff ? ' ・ ' + t('diff.' + h.diff) : '') }),
+          el('span', { class: 'kinds' }, (h.kinds || []).map(function (k) { return Icon.el(Icon.kind(k)); })),
+          el('b', { text: h.win ? t('rec.win') : (h.mode === 'online' ? t('rec.lose') : t('rec.fail')) }), el('span', { class: 'mono muted', text: h.sec ? h.sec.toFixed(1) + 's' : '' })
+        ]));
+      });
+      host.appendChild(el('div', { class: 'panel' }, [el('h3', { text: t('rec.recent') }), hist]));
+      host.appendChild(el('div', { class: 'row', style: 'justify-content:flex-end' }, [UI.button(t('rec.reset'), { cls: 'small ghost danger', onClick: function () { UI.confirm(t('rec.resetAsk'), function () { Store.resetRecords(); draw(); }); } })]));
+    }
+    function drawAch() {
+      const s = Store.rec(), n = Object.keys(s.unlocked).length;
+      host.appendChild(el('p', { class: 'muted', style: 'margin:0', text: t('ach.count', { n: n, m: Records.LIST.length }) }));
+      const grid = el('div', { class: 'ach-grid' });
+      Records.LIST.slice().sort(function (a, b) { return (s.unlocked[b.id] ? 1 : 0) - (s.unlocked[a.id] ? 1 : 0); }).forEach(function (a) {
+        const pr = Records.progress(s, a), on = !!s.unlocked[a.id];
+        const when = on ? new Date(s.unlocked[a.id]) : null;
+        grid.appendChild(el('div', { class: 'ach-card tier-' + a.tier + (on ? ' on' : '') }, [
+          el('div', { class: 'ach-ic' }, [Icon.el(on ? a.icon : 'lock')]),
+          el('div', { class: 'grow' }, [el('b', { text: t('ach.' + a.id) }), el('p', { text: t('achd.' + a.id) }),
+            on ? el('small', { class: 'muted', text: t('ach.at', { d: when.getFullYear() + '/' + (when.getMonth() + 1) + '/' + when.getDate() }) })
+               : el('div', { class: 'ach-bar', role: 'progressbar', 'aria-valuenow': String(pr.cur), 'aria-valuemax': String(pr.max) }, [el('i', { style: 'width:' + Math.round(pr.cur / pr.max * 100) + '%' }), el('span', { text: pr.cur + ' / ' + pr.max })])])
+        ]));
+      });
+      host.appendChild(grid);
+    }
+    function draw() {
+      tabs.textContent = '';
+      [['stats', 'chart', t('rec.tabStats')], ['ach', 'medal', t('ach.title')]].forEach(function (x) { tabs.appendChild(UI.button(x[2], { cls: 'tab small' + (tab === x[0] ? ' is-on' : ''), icon: x[1], onClick: function () { tab = x[0]; draw(); } })); });
+      host.textContent = '';
+      if (tab === 'stats') drawStats(); else drawAch();
+    }
+    ctx.screen.appendChild(UI.scrollArea(el('div', { class: 'stack pad narrow-page wide' }, [tabs, host])));
+    draw();
+  };
+
   /* ---------- 隨機挑戰 ---------- */
   function newSeed() {
     try { const a = new Uint32Array(2); crypto.getRandomValues(a); return a[0].toString(36) + a[1].toString(36); }
@@ -258,7 +341,7 @@
     const modeTitle = daily ? t('daily.title') : (rnd ? t('rand.title') : t('camp.level', { n: p.level }));
     const backTo = daily ? 'daily' : (rnd ? 'random' : 'campaign');
     const hintCap = R.hintLimit(diff);
-    const S = { idx: 0, hints: 0, ph: 0, tries: 0, elapsed: 0, last: performance.now(), paused: false, ended: false, hintMsgs: [], widget: null, wstate: null };
+    const S = { idx: 0, hints: 0, ph: 0, tries: 0, elapsed: 0, last: performance.now(), paused: false, ended: false, hintMsgs: [], widget: null, wstate: null, pTries: 0, pStart: 0, pHints: 0, fresh: [] };
     const gaKey = 'solo:' + Date.now();
     try { if (window.GameAnalytics) GameAnalytics.start({ mode: 'solo', difficulty: diff, variant: daily ? 'daily' : (rnd ? 'random' : 'campaign') }, gaKey); } catch (e) { /* ignore */ }
     let timer = null;
@@ -350,8 +433,11 @@
       if (S.ended) return;
       const pz = puzzles[S.idx];
       const ok = !!R.checkPuzzle(pz, ans).ok;
-      if (!ok) { S.tries++; S.widget.bad(); Audio2.sfx('wrong'); Audio2.vibrate(80); UI.toast(t('play.wrong'), true); drawHud(); return; }
+      if (!ok) { S.tries++; S.pTries++; S.widget.bad(); Audio2.sfx('wrong'); Audio2.vibrate(80); UI.toast(t('play.wrong'), true); drawHud(); return; }
       Audio2.sfx('ok'); Audio2.vibrate(30);
+      // 紀錄：每題答對的時間、錯誤次數、提示次數
+      S.fresh = S.fresh.concat(Store.track({ t: 'solve', type: pz.type, diff: diff, sec: (S.elapsed - S.pStart) / 1000, tries: S.pTries, hints: S.ph }));
+      S.pTries = 0; S.pStart = S.elapsed;
       if (S.idx + 1 >= puzzles.length) { finish('win'); return; }
       UI.toast(t('play.right'));
       S.idx++; S.ph = 0; S.hintMsgs = []; S.wstate = null;
@@ -378,6 +464,7 @@
         else { stars = R.starsFor(diff, p.level, usedSec, S.hints); Store.setStars(diff, p.level, stars); }
       }
       if (rnd) Store.addRandomRun(diff, win ? usedSec : null);
+      S.fresh = S.fresh.concat(Store.track({ t: 'finish', mode: daily ? 'daily' : (rnd ? 'random' : 'campaign'), diff: diff, level: p.level, win: win, why: why, sec: usedSec, hints: S.hints, boss: camp && R.isBoss(p.level), date: p.date, kinds: puzzles.map(function (z) { return z.type; }) }));
       Audio2.sfx(win ? 'win' : 'lose'); Audio2.vibrate(win ? [40, 40, 40] : 200);
       const body2 = [
         el('h3', { class: 'result-title ' + (win ? 'win' : 'lose'), text: win ? t('res.clear') : (why === 'timeup' ? t('res.timeup') : t('res.gaveup')) }),
@@ -385,7 +472,18 @@
           el('span', { class: 'badge', text: t('res.time', { s: usedSec.toFixed(2) }) }),
           el('span', { class: 'badge', text: t('res.hintsUsed', { n: S.hints }) }),
           win && camp ? el('span', { class: 'badge', style: 'color:var(--amber)', text: UI.stars(stars) }) : null
-        ])
+        ]),
+        S.fresh.length ? achStrip(S.fresh) : null,
+        UI.button(t('share.open'), { cls: 'small ghost share-open', icon: 'share', onClick: function () {
+          Share.open({
+            title: modeTitle, sub: t('diff.' + diff), win: win,
+            result: win ? t('res.clear') : (why === 'timeup' ? t('res.timeup') : t('res.gaveup')),
+            stats: [[t('play.time'), usedSec.toFixed(2) + 's'], [t('play.hints'), String(S.hints)], [t('play.tries'), String(S.tries)]].concat(win && camp ? [[t('ach.stars'), UI.stars(stars)]] : []),
+            figures: puzzles.slice(0, 2).map(function (z) { return Figure.solution(z, I18N.lang); }),
+            figLabels: puzzles.slice(0, 2).map(function (z, i) { return (puzzles.length > 1 ? t('res.puzzleN', { n: i + 1 }) + '　' : '') + t('kind.' + z.type) + '　' + t('res.solution'); }),
+            badges: S.fresh.map(function (id) { const a = Records.byId(id); return { name: t('ach.' + id), tier: a ? a.tier : 'bronze' }; })
+          });
+        } })
       ];
       puzzles.forEach(function (pz, i) { body2.push(Puzzle.solutionView(pz, puzzles.length > 1 ? t('res.puzzleN', { n: i + 1 }) : '')); });
       const foot = [];
@@ -393,7 +491,7 @@
       if (win && camp && p.level < R.LEVELS_PER_DIFF) foot.push(UI.button(t('common.next'), { cls: 'primary', icon: 'play', onClick: function () { m.close(); go('play', { mode: 'campaign', diff: diff, level: p.level + 1 }); } }));
       foot.push(UI.button(camp ? t('common.levelList') : t('common.back'), { cls: 'ghost', icon: daily ? 'daily' : (rnd ? 'dice' : 'stack'), onClick: function () { m.close(); go(backTo, { diff: diff }); } }));
       foot.push(UI.button(t('common.home'), { cls: 'ghost', icon: 'home', onClick: function () { m.close(); go('home'); } }));
-      const m = UI.modal({ title: modeTitle, body: body2, footer: foot, closable: false });
+      const m = UI.modal({ title: modeTitle, body: body2.filter(Boolean), footer: foot, closable: false });
     }
 
     ctx.setBack(function () {

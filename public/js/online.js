@@ -201,14 +201,14 @@
           resetRoomState(); S.invite = null; S.view = 'lobby'; render(); send({ t: 'lobbychat', op: 'join' });
           break;
         case 'matchStart': if (!isSpec()) ga(function (A) { A.start({ mode: 'online', players: S.room ? S.room.players.length : 2 }, 'm:' + Date.now()); });
-          S.leftMatch = false; if (S.match) { S.match.last = null; S.match.cur = null; S.match.finished = false; } if (finalDlg) { finalDlg.close(); finalDlg = null; } break;
+          S.leftMatch = false; S.myRounds = []; if (S.match) { S.match.last = null; S.match.cur = null; S.match.finished = false; } if (finalDlg) { finalDlg.close(); finalDlg = null; } break;
         case 'round': onRound(m); break;
         case 'progress': S.done = m.done; drawBoard(); break;
         case 'picked': S.picked = true; drawRoundStatus(); break;
         case 'solved': S.solved = true; Audio2.sfx('ok'); drawRoundStatus(); break;
         case 'wrong': if (widget) widget.bad(); Audio2.sfx('wrong'); Audio2.vibrate(80); UI.toast(t('play.wrong'), true); break;
         case 'roundEnd': onRoundEnd(m); break;
-        case 'matchEnd': if (!isSpec()) ga(function (A) { A.end({ result: m.winners.indexOf(pid) !== -1 ? 'win' : 'lose' }); }); onMatchEnd(m); break;
+        case 'matchEnd': if (!isSpec()) { ga(function (A) { A.end({ result: m.winners.indexOf(pid) !== -1 ? 'win' : 'lose' }); }); S.fresh = Store.track({ t: 'online', win: m.winners.indexOf(pid) !== -1, players: Object.keys(m.players || {}).length, rounds: S.myRounds || [] }); } else S.fresh = []; onMatchEnd(m); break;
         case 'error': onError(m); break;
         default: break;
       }
@@ -647,6 +647,8 @@
     function onRoundEnd(re) {
       S.match = S.match || {};
       S.match.last = re; S.match.cur = null; S.match.players = re.players; S.match.round = re.index; offsetFrom(re.now);
+      // 紀錄：本局每回合是否拿到第一（大或小以猜中為準）
+      if (!isSpec() && re.points && re.points[pid] != null) (S.myRounds = S.myRounds || []).push({ kind: re.kind, won: re.kind === 'hilo' ? re.points[pid] > 0 : re.winners.indexOf(pid) !== -1 });
       if (widget) { widget.destroy(); widget = null; }
       if (S.view === 'match' && M) showReveal(re);
     }
@@ -726,7 +728,14 @@
       if (!silent) Audio2.sfx(iWon ? 'win' : 'lose');
       const dlg = UI.modal({
         title: t('m.final'), closable: false,
-        body: [el('h3', { class: 'result-title ' + (iWon ? 'win' : ''), text: t('m.champion') + '：' + m.winners.map(nameOf).join('、') }), tbl],
+        body: [el('h3', { class: 'result-title ' + (iWon ? 'win' : ''), text: t('m.champion') + '：' + m.winners.map(nameOf).join('、') }), tbl,
+          S.fresh && S.fresh.length ? el('div', { class: 'ach-strip' }, [el('div', { class: 'label', text: t('ach.unlockedNow') }), el('div', { class: 'row' }, S.fresh.map(function (id) { const a = Records.byId(id); return el('div', { class: 'ach-badge tier-' + (a ? a.tier : 'bronze') }, [Icon.el(a ? a.icon : 'medal'), el('span', { text: t('ach.' + id) })]); }))]) : null,
+          UI.button(t('share.open'), { cls: 'small ghost share-open', icon: 'share', onClick: function () {
+            Share.open({ title: S.room ? S.room.name : t('home.online'), sub: t('room.fmt.' + m.format), win: iWon, result: t('m.champion') + '：' + m.winners.map(nameOf).join('、'),
+              stats: [[t('m.final'), (order.indexOf(pid) + 1 || '—') + ' / ' + order.length]],
+              lines: order.map(function (id, i) { return [(i + 1) + '. ' + nameOf(id) + (id === pid ? t('chat.me') : ''), String(m.format === 'chips' ? m.players[id].chips + '⛁' : m.players[id].score)]; }),
+              badges: (S.fresh || []).map(function (id) { const a = Records.byId(id); return { name: t('ach.' + id), tier: a ? a.tier : 'bronze' }; }) });
+          } })],
         footer: [
           UI.button(host ? t('common.again') : t('m.waitHost'), { cls: 'primary', icon: 'retry', disabled: !host, onClick: function () { send({ t: 'm:again' }); } }),
           UI.button(t('common.room'), { cls: 'ghost', icon: 'room', onClick: function () {

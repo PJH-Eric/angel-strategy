@@ -55,6 +55,7 @@ const CHECK = function () {
         }
       }
     }
+    if ((el.classList.contains('btn') || el.classList.contains('badge') || el.classList.contains('kind-tag')) && el.scrollWidth > el.clientWidth + 2 && !el.closest('svg')) out.push('文字被截斷：' + String(el.className).slice(0, 24) + '「' + el.textContent.trim().slice(0, 16) + '」');
     const tag = el.tagName;
     if (tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'INPUT' && /^(checkbox|radio|range|number|date|file|color)$/.test(el.type))) out.push('原生控制項：' + tag + (el.type ? '[' + el.type + ']' : ''));
     if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1 && !el.classList.contains('sa-view') && cs.scrollbarWidth !== 'none') out.push('原生捲軸：' + el.tagName + '.' + String(el.className).slice(0, 30));
@@ -136,6 +137,8 @@ const CHECK = function () {
       // 長結算：魔王關三題、隨機挑戰五題
       await scene('boss-result', async function () { await pg.evaluate(function () { App.go('play', { diff: 'hard', level: 10 }); }); await pg.waitForSelector('.panel'); await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
       await scene('random-result', async function () { await pg.evaluate(function () { App.go('play', { mode: 'random', diff: 'myth', seed: 'audit2' }); }); await pg.waitForSelector('.panel'); await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
+      await scene('records', async function () { await pg.evaluate(function () { App.go('records', { tab: 'stats' }); }); });
+      await scene('achievements', async function () { await pg.evaluate(function () { App.go('records', { tab: 'ach' }); }); });
       await scene('online-lobby', async function () { await pg.evaluate(function () { App.go('online', {}); }); await pg.waitForSelector('.room-card, text=' + (lang === 'en' ? 'New room' : '開新房間'), { timeout: 8000 }).catch(function () {}); });
       await ctx.close();
     }

@@ -507,3 +507,48 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
 /* 結算／解法彈窗在平板以上加寬，解法圖更清楚 */
 @media (min-width: 760px) { .dialog:has(.sol) { width: min(720px, 100%); } }
 @media (min-width: 760px) { .dialog .sol .fig-wrap svg.figure { max-width: 600px !important; } }
+
+/* ===== 紀錄與成就 ===== */
+.menu-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+@media (orientation: landscape) and (max-height: 520px) { .home .menu .menu-pair { grid-column: 1 / -1; } }
+.narrow-page.wide { max-width: 980px; }
+.rec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 10px; }
+.rec-card { display: flex; gap: 12px; align-items: center; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+.rec-card > .ic { width: 30px; height: 30px; color: var(--cyan); }
+.rec-card > div { display: flex; flex-direction: column; min-width: 0; }
+.rec-card b { font: 700 1.35em var(--mono); color: var(--text); }
+.rec-card span, .rec-card small { font-size: .8em; }
+.rec-kinds { display: grid; gap: 6px; }
+.rec-kind, .rec-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--steel); border-left: 3px solid var(--cyan); }
+.rec-kind > .ic { width: 22px; height: 22px; color: var(--cyan); }
+.rec-kind b { min-width: 5em; text-align: right; }
+.rec-kind .muted { min-width: 6.5em; text-align: right; font-size: .85em; }
+.rec-hist { display: grid; gap: 5px; }
+.rec-row { border-left-color: var(--red); font-size: .9em; flex-wrap: wrap; }
+.rec-row.win { border-left-color: var(--green); }
+.rec-row b { color: var(--red); } .rec-row.win b { color: var(--green); }
+.rec-row .kinds { display: inline-flex; gap: 3px; color: var(--dim); }
+.rec-row .kinds .ic { width: 15px; height: 15px; }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); gap: 10px; }
+.ach-card { --tc: #d08b54; display: flex; gap: 12px; padding: 12px; background: var(--panel); border: 1px solid var(--line); opacity: .78; }
+.ach-card.tier-silver { --tc: #c8d3db; } .ach-card.tier-gold { --tc: #f2c14e; }
+.ach-card.on { opacity: 1; border-color: var(--tc); box-shadow: inset 0 0 0 1px rgba(255,255,255,.03), 0 0 18px -8px var(--tc); }
+.ach-ic { flex: none; width: 52px; height: 52px; display: grid; place-items: center; border: 2px solid var(--tc); color: var(--tc); clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); background: rgba(255,255,255,.03); }
+.ach-card:not(.on) .ach-ic { border-color: var(--line); color: var(--dim); }
+.ach-ic .ic { width: 26px; height: 26px; }
+.ach-card b { display: block; } .ach-card p { margin: 2px 0 6px; font-size: .84em; color: var(--dim); }
+.ach-bar { position: relative; height: 16px; background: #0b1014; border: 1px solid var(--line); }
+.ach-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--tc); opacity: .55; }
+.ach-bar span { position: relative; display: block; text-align: center; font: 600 11px/14px var(--mono); color: var(--text); }
+.ach-strip { display: grid; gap: 6px; }
+.ach-badge { --tc: #d08b54; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--tc); color: var(--tc); font-size: .88em; background: rgba(255,255,255,.03); }
+.ach-badge.tier-silver { --tc: #c8d3db; } .ach-badge.tier-gold { --tc: #f2c14e; }
+.share-open { align-self: flex-start; }
+.share-preview { display: grid; place-items: center; }
+.share-img { max-width: 100%; max-height: 60vh; border: 1px solid var(--line); }
+.share-status { margin: 0 0 8px; }
+.tab2 { flex-direction: column; gap: 0; line-height: 1.15; padding-top: 4px; padding-bottom: 4px; }
+.tab2 small { font: 600 .78em var(--mono); opacity: .8; }
+@media (max-width: 560px) { .rec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rec-card { padding: 10px; gap: 8px; } .rec-card > .ic { width: 22px; height: 22px; } .rec-card b { font-size: 1.1em; } }
+.rec-kind .grow { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 560px) { .rec-kind b, .rec-kind .muted { min-width: 0; } .rec-kind { gap: 8px; font-size: .9em; } }

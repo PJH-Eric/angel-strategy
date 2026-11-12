@@ -1,7 +1,7 @@
 /* 本機存檔：設定、闖關進度、每日挑戰紀錄、暱稱。所有讀寫都包 try/catch。 */
 (function () {
   'use strict';
-  const K = { settings: 'as.settings.v1', progress: 'as.progress.v1', daily: 'as.daily.v1', name: 'as.name.v1', chatOpen: 'as.chatopen.v1', pid: 'as.pid.v1', random: 'as.random.v1' };
+  const K = { settings: 'as.settings.v1', progress: 'as.progress.v1', daily: 'as.daily.v1', name: 'as.name.v1', chatOpen: 'as.chatopen.v1', pid: 'as.pid.v1', random: 'as.random.v1', records: 'as.records.v1' };
   const DEFAULT_SETTINGS = { bgm: true, sfx: true, bgmVol: 0.5, sfxVol: 0.8, vibrate: true, reduce: false, lobbyChat: true };
   function read(k, fb) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } }
   function write(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } }
@@ -38,6 +38,18 @@
       while (keys.length > 60) delete Store.daily[keys.shift()];
       write(K.daily, Store.daily);
     },
+
+    /* 紀錄與成就：Records.apply 更新統計，回傳本次新解鎖的成就 id */
+    records: null,
+    rec: function () { if (!Store.records) Store.records = window.Records ? Records.normalize(read(K.records, null)) : {}; return Store.records; },
+    track: function (ev) {
+      if (!window.Records) return [];
+      let fresh = [];
+      try { fresh = Records.apply(Store.rec(), ev); write(K.records, Store.records); } catch (e) { fresh = []; }
+      if (fresh.length && window.App && App.onAchieve) App.onAchieve(fresh);
+      return fresh;
+    },
+    resetRecords: function () { Store.records = Records.blank(); write(K.records, Store.records); },
 
     /* 隨機挑戰：{ diff: { best, runs, wins } } */
     random: read(K.random, {}),

@@ -156,7 +156,7 @@
   function modal(opts) {
     const prev = document.activeElement;
     const body = el('div', { class: 'stack', style: 'width:100%;padding-bottom:6px' });
-    (opts.body || []).forEach(function (n) { body.appendChild(n); });
+    (opts.body || []).forEach(function (n) { if (n) body.appendChild(n); });   // 允許條件式內容傳 null
     const sa = scrollArea(body, { label: opts.title });
     const head = el('header', null, [el('h2', { text: opts.title || '' })]);
     const dlg = el('div', { class: 'dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.title || null }, [head, el('div', { class: 'body' }, [sa])]);
