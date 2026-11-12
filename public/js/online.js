@@ -576,7 +576,7 @@
           panel.appendChild(el('div', { class: 'row', style: 'justify-content:center' }, [-10, -1, 1, 10].map(function (d) { return UI.button((d > 0 ? '+' : '−') + Math.abs(d), { cls: 'small', onClick: function () { adj(d); } }); })));
         } else {
           const grid = el('div', { class: 'pick-grid' });
-          for (let n = p.min; n <= p.max; n++) (function (n) { grid.appendChild(UI.button(String(n), { onClick: function () { val = n; Array.prototype.forEach.call(grid.children, function (b) { b.classList.remove('is-on'); }); this.classList.add('is-on'); }.bind(null) })); })(n);
+          for (let n = p.min; n <= p.max; n++) grid.appendChild(UI.button(String(n), {}));   // 點選由下方的監聽處理
           val = null;
           Array.prototype.forEach.call(grid.children, function (b, i) { b.addEventListener('click', function () { val = p.min + i; Array.prototype.forEach.call(grid.children, function (x) { x.classList.remove('is-on'); }); b.classList.add('is-on'); }); });
           panel.appendChild(grid);
