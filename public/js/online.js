@@ -422,6 +422,7 @@
 
     /* 對局 */
     function kindLabel(k) { return t('m.k.' + k); }
+    function isPick(k) { return k === 'num' || k === 'auction' || k === 'hilo' || k === 'remove'; }
     function numHelp(params) {
       return t('m.num.' + params.mode, { f: params.factor ? Math.round(params.factor * 100) / 100 : '', max: params.max });
     }
@@ -462,6 +463,7 @@
         const done = S.match.cur && S.done.indexOf(id) !== -1;
         const row = el('div', { class: 'p' + (id === pid ? ' me' : '') + (p.alive ? '' : ' out') + (done ? ' done' : '') }, [
           el('span', { class: 'nm', text: nameOf(id) }),
+          el('span', { class: 'bk', title: t('m.bank', { n: p.bank }), text: '⏱' + p.bank }),
           el('span', { class: 'sc', text: S.match.format === 'chips' ? p.chips + '⛁ ' + p.score : String(p.score) }),
           !p.alive ? el('span', { class: 'badge', text: t('m.out') }) : null
         ]);
@@ -510,7 +512,7 @@
       M.content.textContent = '';
       drawBoard();
       const act = canAct() && !(S.picked || S.solved);
-      M.content.appendChild(el('div', { class: 'panel' }, [el('h3', { text: kindLabel(cur.kind) }), cur.kind === 'num' ? el('p', { style: 'margin:0', text: numHelp(cur.params) }) : null]));
+      M.content.appendChild(el('div', { class: 'panel' }, [el('h3', { text: kindLabel(cur.kind) }), cur.kind === 'num' ? el('p', { style: 'margin:0', text: numHelp(cur.params) }) : (isPick(cur.kind) ? el('p', { style: 'margin:0', text: t('m.help.' + cur.kind, { prize: cur.params && cur.params.prize }) }) : null)]));
       if (cur.kind === 'num') {
         const p = cur.params; let val = Math.round((p.min + p.max) / 2);
         const panel = el('div', { class: 'panel stack' });
@@ -531,10 +533,58 @@
         panel.appendChild(UI.button(t('m.pick'), { cls: 'primary big block', disabled: !act, onClick: function () { if (val == null) { UI.toast(t('err.bad_pick'), true); return; } send({ t: 'm:pick', v: val }); } }));
         if (S.role === 'spec') panel.style.display = 'none';
         M.content.appendChild(panel);
+      } else if (cur.kind === 'auction') {
+        const me = S.match.players[pid] || { bank: 0 };
+        const bank = me.bank; let bid = 0;
+        const panel = el('div', { class: 'panel stack' });
+        panel.appendChild(el('div', { class: 'row', style: 'justify-content:center;gap:18px' }, [el('span', { class: 'badge', text: t('m.prize', { n: cur.params.prize }) }), el('span', { class: 'badge', text: t('m.bank', { n: bank }) })]));
+        const big = el('div', { class: 'bigpick', text: '0' });
+        const sl = UI.slider(0, function (v) { bid = Math.round(v * bank); big.textContent = String(bid); }, t('m.bid'));
+        sl.style.width = '100%';
+        const adj = function (d) { bid = Math.min(bank, Math.max(0, bid + d)); big.textContent = String(bid); sl.set(bank ? bid / bank : 0); };
+        panel.appendChild(big); panel.appendChild(sl);
+        panel.appendChild(el('div', { class: 'row', style: 'justify-content:center' }, [-5, -1, 1, 5].map(function (d) { return UI.button((d > 0 ? '+' : '−') + Math.abs(d), { cls: 'small', onClick: function () { adj(d); } }); })));
+        panel.appendChild(UI.button(t('m.bidGo'), { cls: 'primary big block', disabled: !act, onClick: function () { send({ t: 'm:pick', v: bid }); } }));
+        if (S.role === 'spec') panel.style.display = 'none';
+        M.content.appendChild(panel);
+      } else if (cur.kind === 'hilo') {
+        const others = (cur.view && cur.view.others) || {};
+        const panel = el('div', { class: 'panel stack' });
+        panel.appendChild(el('div', { class: 'label', text: t('m.others') }));
+        const row = el('div', { class: 'cards' });
+        Object.keys(others).forEach(function (id) { row.appendChild(el('div', { class: 'card' }, [el('b', { class: 'cv', text: String(others[id]) }), el('span', { class: 'cn', text: nameOf(id) })])); });
+        row.appendChild(el('div', { class: 'card me' }, [el('b', { class: 'cv', text: '?' }), el('span', { class: 'cn', text: t('room.you') })]));
+        panel.appendChild(row);
+        let call = null; const btns = {};
+        const group = el('div', { class: 'row', style: 'justify-content:center' });
+        ['H', 'L', 'M'].forEach(function (k) { const b = UI.button(t('m.call.' + k), { cls: 'ghost', onClick: function () { call = k; Object.keys(btns).forEach(function (x) { btns[x].classList.toggle('is-on', x === k); }); } }); btns[k] = b; group.appendChild(b); });
+        panel.appendChild(group);
+        panel.appendChild(UI.button(t('play.submit'), { cls: 'primary big block', disabled: !act, onClick: function () { if (!call) { UI.toast(t('m.pickOne'), true); return; } send({ t: 'm:pick', v: call }); } }));
+        if (S.role === 'spec' || !cur.view) panel.style.display = 'none';
+        M.content.appendChild(panel);
+      } else if (cur.kind === 'remove') {
+        const hand = (cur.view && cur.view.hand) || [];
+        const panel = el('div', { class: 'panel stack' });
+        panel.appendChild(el('div', { class: 'label', text: t('m.hand') }));
+        const sel = [];
+        const row = el('div', { class: 'cards' });
+        hand.forEach(function (v, i) {
+          const c = el('button', { type: 'button', class: 'card pick' }, [el('b', { class: 'cv', text: String(v) })]);
+          c.addEventListener('click', function () {
+            const at = sel.indexOf(i);
+            if (at !== -1) sel.splice(at, 1); else { if (sel.length >= 2) sel.shift(); sel.push(i); }
+            Array.prototype.forEach.call(row.children, function (x, k) { x.classList.toggle('is-on', sel.indexOf(k) !== -1); });
+          });
+          row.appendChild(c);
+        });
+        panel.appendChild(row);
+        panel.appendChild(UI.button(t('play.submit'), { cls: 'primary big block', disabled: !act, onClick: function () { if (sel.length !== 2) { UI.toast(t('m.pickTwo'), true); return; } send({ t: 'm:pick', v: sel.slice().sort() }); } }));
+        if (S.role === 'spec' || !cur.view) panel.style.display = 'none';
+        M.content.appendChild(panel);
       } else {
         const puzzle = cur.puzzle;
         const o = { onSubmit: function (ans) { if (canAct() && !S.solved) send({ t: 'm:solve', answer: ans }); } };
-        widget = puzzle.type === 'deduce' ? Puzzle.mountDeduce(puzzle, o) : Puzzle.mountArith(puzzle, o);
+        widget = Puzzle.mount(puzzle, o);
         const grid = el('div', { class: 'play' }, [el('div', { class: 'panel' }, [widget.cluesEl]), el('div', { class: 'panel' }, [widget.entryEl])]);
         if (!act) grid.style.opacity = '.55';
         M.content.appendChild(grid);
@@ -548,21 +598,62 @@
       if (widget) { widget.destroy(); widget = null; }
       if (S.view === 'match' && M) showReveal(re);
     }
+    function pickText(re, id) {
+      const v = re.picks[id];
+      if (v == null) return t('m.noPick');
+      if (re.kind === 'auction') return String(v) + (re.info.spend && re.info.spend[id] ? '（−' + re.info.spend[id] + '⏱）' : '');
+      if (re.kind === 'hilo') return t('m.card', { n: re.info.cards[id] }) + ' / ' + t('m.call.' + v);
+      if (re.kind === 'remove') return re.info.played[id] ? re.info.played[id].map(function (c, i) { return re.info.removed[id][i] ? '✗' + c : String(c); }).join(' ') + ' = ' + re.info.score[id] : t('m.noPick');
+      return String(v);
+    }
+    // 暗標玩法的圖解：把所有人的牌／出價攤開並標註怎麼判定
+    function sealedExplain(re) {
+      const i = re.info, box = el('div', { class: 'sol' }, [el('h4', { text: t('res.solution') })]);
+      const ids = Object.keys(re.points);
+      if (re.kind === 'auction') {
+        const mx = Math.max.apply(null, ids.map(function (id) { return i.bids[id] || 0; }).concat([1]));
+        ids.forEach(function (id) {
+          const b = i.bids[id] || 0;
+          box.appendChild(el('div', { class: 'bidbar' + (i.winner === id ? ' win' : '') + (i.tie && b === i.top ? ' tie' : '') }, [el('span', { class: 'nm', text: nameOf(id) }), el('span', { class: 'bar' }, [el('i', { style: 'width:' + Math.round(b / mx * 100) + '%' })]), el('b', { class: 'mono', text: String(b) })]));
+        });
+        box.appendChild(el('div', { text: i.winner ? t('m.ex.auctionWin', { name: nameOf(i.winner), bid: i.top, prize: i.prize }) : (i.tie ? t('m.ex.auctionTie', { bid: i.top }) : t('m.ex.auctionNone')) }));
+      } else if (re.kind === 'hilo') {
+        const row = el('div', { class: 'cards' });
+        ids.forEach(function (id) {
+          const tr = i.truth[id], ok = i.calls[id] === tr;
+          row.appendChild(el('div', { class: 'card ' + (ok ? 'good' : 'badc') }, [el('b', { class: 'cv', text: String(i.cards[id]) }), el('span', { class: 'cn', text: nameOf(id) }), el('span', { class: 'cn', text: t('m.actual') + '：' + t('m.call.' + tr) }), el('span', { class: 'cn', text: t('m.guess') + '：' + (i.calls[id] ? (ok ? '✓ ' : '✗ ') + t('m.call.' + i.calls[id]) : t('m.noPick')) })]));
+        });
+        box.appendChild(row);
+        box.appendChild(el('div', { text: t('m.ex.hilo') }));
+      } else {
+        ids.forEach(function (id) {
+          const pl = i.played[id];
+          const row = el('div', { class: 'cards inline' }, [el('span', { class: 'nm', text: nameOf(id) })]);
+          if (!pl) row.appendChild(el('span', { class: 'muted', text: t('m.noPick') }));
+          else pl.forEach(function (c, k) { row.appendChild(el('div', { class: 'card sm' + (i.removed[id][k] ? ' gone' : '') }, [el('b', { class: 'cv', text: String(c) })])); });
+          row.appendChild(el('b', { class: 'mono', text: '= ' + i.score[id] }));
+          box.appendChild(row);
+        });
+        box.appendChild(el('div', { text: t('m.ex.remove', { max: i.max, min: i.min }) }));
+      }
+      return box;
+    }
     function showReveal(re) {
       if (!M) return;
       M.content.textContent = '';
       drawBoard();
       const rows = Object.keys(re.points).sort(function (a, b) { return re.ranks[a] - re.ranks[b]; });
-      const tbl = el('table', { class: 'rtable' }, [el('tr', null, [el('th', { text: '#' }), el('th', { text: '' }), el('th', { text: re.kind === 'num' ? t('m.revealed') : t('play.time') }), el('th', { text: t('m.score') })])]);
+      const tbl = el('table', { class: 'rtable' }, [el('tr', null, [el('th', { text: '#' }), el('th', { text: '' }), el('th', { text: isPick(re.kind) ? t('m.revealed') : t('play.time') }), el('th', { text: t('m.score') })])]);
       rows.forEach(function (id) {
-        const v = re.kind === 'num' ? (re.picks[id] == null ? t('m.noPick') : String(re.picks[id])) : (re.times[id] == null ? t('m.noPick') : UI.fmtSec(re.times[id]) + 's');
+        const v = isPick(re.kind) ? pickText(re, id) : (re.times[id] == null ? t('m.noPick') : UI.fmtSec(re.times[id]) + 's');
         tbl.appendChild(el('tr', { class: re.winners.indexOf(id) !== -1 ? 'win' : '' }, [el('td', { text: String(re.ranks[id]) }), el('td', { text: nameOf(id) + (id === pid ? '（' + t('room.you') + '）' : '') }), el('td', { class: 'mono', text: v }), el('td', { class: 'mono', text: t('m.pts', { n: re.points[id] }) })]));
       });
       const box = el('div', { class: 'panel stack' }, [el('h3', { text: t('m.roundEnd') + ' ・ ' + kindLabel(re.kind) }), tbl]);
       if (re.kind === 'num') box.appendChild(el('div', { class: 'sol' }, [el('h4', { text: t('res.solution') }), el('div', { text: R.explainNumGame(re.params, { info: re.info }, I18N.lang) })]));
+      if (re.kind === 'auction' || re.kind === 'hilo' || re.kind === 'remove') box.appendChild(sealedExplain(re));
       if (re.eliminated && re.eliminated.length) box.appendChild(el('div', { class: 'badge', style: 'border-color:var(--red);color:var(--red);width:fit-content', text: t('m.out') + '：' + re.eliminated.map(nameOf).join('、') }));
       M.content.appendChild(box);
-      if (re.kind !== 'num' && re.puzzle) M.content.appendChild(Puzzle.solutionView(re.puzzle, kindLabel(re.kind)));
+      if (re.puzzle) M.content.appendChild(Puzzle.solutionView(re.puzzle, kindLabel(re.kind)));
       Audio2.sfx(re.winners.indexOf(pid) !== -1 ? 'win' : 'reveal');
     }
     function onMatchEnd(m, silent) {

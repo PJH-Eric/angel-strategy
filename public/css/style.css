@@ -256,3 +256,77 @@ body { touch-action: manipulation; }
 @media (max-width: 700px), (max-height: 520px) {
   .lc-panel { left: 0; right: 0; bottom: 0; top: 0; width: auto; height: auto; z-index: 700; padding-top: var(--safe-t); }
 }
+
+/* ===== 解法圖（SVG）與新題型 ===== */
+.fig-wrap { display: grid; justify-items: center; margin: 6px 0 10px; }
+.fig-wrap.bad { animation: shake .35s; }
+svg.figure { width: 100%; height: auto; display: block; background: #0b1014; border: 1px solid var(--line); }
+.fg-t { font-family: var(--mono); font-size: 13px; fill: var(--text); }
+.fg-title { font: 700 14px var(--sans); fill: var(--amber); }
+.fg-sub { font-size: 11px; fill: var(--dim); font-family: var(--sans); }
+.fg-line { font-size: 13px; fill: var(--text); }
+.fg-ok { fill: var(--green); font-size: 13px; }
+.fg-bad { fill: var(--red); font-size: 12px; font-family: var(--sans); }
+.fg-final-eq { font: 700 15px var(--mono); fill: var(--green); }
+.fg-num { font: 700 15px var(--mono); fill: var(--text); }
+.fg-bignum { font: 700 30px var(--mono); fill: var(--amber); }
+.fg-opch { font: 700 16px var(--mono); fill: var(--amber); }
+.fg-itemt { font: 700 12px var(--mono); fill: #0b1014; }
+.fg-sum { font: 700 13px var(--mono); fill: var(--cyan); }
+.fg-edge { stroke: var(--line); stroke-width: 2; }
+.fg-col { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 4; }
+.fg-link { stroke: var(--amber); stroke-width: 2; opacity: .6; }
+.fg-rule { stroke: var(--line); stroke-width: 1; }
+.fg-dash { stroke-dasharray: 4 4; }
+.fg-leaf { fill: #14323d; stroke: var(--cyan); stroke-width: 1.5; }
+.fg-op { fill: var(--steel); stroke: var(--steel2); stroke-width: 1.5; }
+.fg-op.fg-final { stroke: var(--green); fill: #12302a; stroke-width: 2; }
+.fg-slot { fill: #10221c; stroke: var(--green); stroke-width: 2; }
+.fg-dot { fill: var(--amber); }
+.fg-dott { fill: #0b1014; font-size: 11px; font-weight: 700; text-anchor: middle; }
+.fg-badge { fill: var(--amber); }
+.fg-badget { fill: #0b1014; font-size: 10px; font-weight: 700; }
+.fg-hl { fill: rgba(63, 191, 144, .12); stroke: var(--green); stroke-width: 1; }
+.fg-beam { stroke: var(--text); stroke-width: 5; stroke-linecap: round; }
+.fg-beam.fg-balanced { stroke: var(--green); }
+.fg-stand { fill: var(--steel2); }
+.fg-pivot { fill: var(--amber); }
+.fg-rope, .fg-pan { stroke: var(--dim); stroke-width: 1.5; }
+.fg-item { stroke: #0b1014; stroke-width: 1; }
+.fg-s0 { fill: #f2a81d; } .fg-s1 { fill: #5cb7cf; } .fg-s2 { fill: #3fbf90; } .fg-s3 { fill: #d783d9; } .fg-s4 { fill: #e0463d; }
+.fg-const { fill: #8396a4; }
+.fg-lvl { fill: var(--steel); stroke: var(--line); }
+.fg-oplevel.is-click { cursor: pointer; }
+.fg-oplevel.is-click:hover .fg-lvl, .fg-oplevel.is-click:focus .fg-lvl { stroke: var(--amber); }
+.slot.wide { width: clamp(64px, 16vw, 96px); aspect-ratio: 4/3; font-size: clamp(18px, 4vw, 28px); }
+
+/* 找規則 */
+.rule-table { display: grid; gap: 6px; }
+.rule-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #0b1014; border: 1px solid var(--line); font-size: 1.05em; color: var(--text); text-align: left; width: 100%; }
+.rule-row .arrow { color: var(--dim); }
+.rule-row .out, .rule-row .ans-box { margin-left: auto; color: var(--amber); font-weight: 700; min-width: 3ch; text-align: right; }
+.rule-row.test { cursor: pointer; font-family: inherit; }
+.rule-row.test.is-cur { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(92,183,207,.25); }
+.rule-row.bad { animation: shake .35s; border-color: var(--red); }
+.btn.num.used, .btn.used { opacity: .35; }
+
+/* 線上暗標玩法 */
+.cards { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
+.cards.inline { justify-content: flex-start; }
+.cards .nm { min-width: 4.5em; color: var(--dim); }
+.card { width: clamp(64px, 16vw, 92px); padding: 8px 4px; display: grid; justify-items: center; gap: 2px; background: linear-gradient(#1e2830, #151c22); border: 2px solid var(--line); color: var(--text); font-family: inherit; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+.card .cv { font: 700 clamp(24px, 6vw, 36px) var(--mono); color: var(--amber); }
+.card .cn { font-size: .72em; color: var(--dim); }
+.card.me { border-style: dashed; }
+.card.me .cv { color: var(--dim); }
+.card.pick { cursor: pointer; }
+.card.pick.is-on { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(92,183,207,.3); transform: translateY(-4px); }
+.card.good { border-color: var(--green); } .card.badc { border-color: var(--red); }
+.card.sm { width: 48px; padding: 4px; } .card.sm .cv { font-size: 20px; }
+.card.gone { opacity: .55; } .card.gone .cv { text-decoration: line-through; color: var(--red); }
+.bidbar { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+.bidbar .nm { min-width: 5em; }
+.bidbar .bar { flex: 1; height: 14px; background: #0b1014; border: 1px solid var(--line); }
+.bidbar .bar i { display: block; height: 100%; background: var(--steel2); }
+.bidbar.win .bar i { background: var(--green); } .bidbar.tie .bar i { background: var(--red); }
+.board .p .bk { color: var(--cyan); font: 600 .8em var(--mono); margin-right: 8px; }

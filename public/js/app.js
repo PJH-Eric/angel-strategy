@@ -216,7 +216,7 @@
       const pz = puzzles[S.idx];
       body.textContent = '';
       const o = { state: S.wstate, onChange: function (st) { S.wstate = st; }, onSubmit: function (ans) { submit(ans); } };
-      S.widget = pz.type === 'deduce' ? Puzzle.mountDeduce(pz, o) : Puzzle.mountArith(pz, o);
+      S.widget = Puzzle.mount(pz, o);
       const left = el('div', { class: 'panel' }, [S.widget.cluesEl]);
       const right = el('div', { class: 'panel' }, [S.widget.entryEl]);
       body.appendChild(left); body.appendChild(right);
@@ -251,9 +251,7 @@
         if (!h) return;
         S.widget.lockHint(h.pos, h.digit);
       } else {
-        const ex = R.explainArith(pz);
-        const step = ex.steps[Math.min(S.ph, ex.steps.length - 1)];
-        S.hintMsgs.push(step);
+        S.hintMsgs.push(R.hintPuzzle(pz, S.ph, I18N.lang));
       }
       S.hints++; S.ph++; Audio2.sfx('ok');
       drawHintBox(); drawHud(); drawActions();
@@ -262,7 +260,7 @@
     function submit(ans) {
       if (S.ended) return;
       const pz = puzzles[S.idx];
-      const ok = pz.type === 'deduce' ? R.checkDeduce(pz, ans) : R.checkArith(pz, ans).ok;
+      const ok = !!R.checkPuzzle(pz, ans).ok;
       if (!ok) { S.tries++; S.widget.bad(); Audio2.sfx('wrong'); Audio2.vibrate(80); UI.toast(t('play.wrong'), true); drawHud(); return; }
       Audio2.sfx('ok'); Audio2.vibrate(30);
       if (S.idx + 1 >= puzzles.length) { finish('win'); return; }
