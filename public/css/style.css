@@ -564,3 +564,6 @@ body:has(.overlay) .toast-host { bottom: calc(96px + var(--safe-b)); }
   .match .board .p .bk { display: none; }
   .match > .panel:first-child h3 { margin-bottom: 6px; }
 }
+/* 已選取的按鈕（金字塔運算、大或小、數字博弈等）要一眼看得出來 */
+.btn.is-on { --c: #8a5f0c; --bd: var(--amber); color: #fff3d4; box-shadow: 0 0 0 2px rgba(242,168,29,.35); }
+.btn.ghost.is-on { background: var(--c); }
