@@ -498,3 +498,12 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
   .play.fig-main { grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); }
   .play.fig-main .fig-wrap svg.figure { max-width: 640px !important; }
 }
+/* 平板／桌機：找規則範例排兩欄，輸入與輸出靠近好對照 */
+@media (min-width: 700px) {
+  .rule-table { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); column-gap: 10px; }
+  .rule-table > .label { grid-column: 1 / -1; }
+  .play .rule-row.test { max-width: 520px; margin-left: auto; margin-right: auto; }
+}
+/* 結算／解法彈窗在平板以上加寬，解法圖更清楚 */
+@media (min-width: 760px) { .dialog:has(.sol) { width: min(720px, 100%); } }
+@media (min-width: 760px) { .dialog .sol .fig-wrap svg.figure { max-width: 600px !important; } }
