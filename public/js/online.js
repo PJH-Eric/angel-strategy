@@ -135,8 +135,16 @@
     document.addEventListener('as:prefs', onPrefs);
 
     function onPrefs() { if (chat) chat.redraw(); }
+    // 連線狀態橫幅：房間／對局中斷線時顯示「重新連線中」，恢復後自動消失
+    const netBanner = el('div', { class: 'net-banner', role: 'status', 'aria-live': 'polite' }, [Icon.el('online'), el('span', { text: t('on.reconnecting') })]);
+    netBanner.hidden = true; document.body.appendChild(netBanner);
+    function showNet(v) { netBanner.hidden = !v || (S.view !== 'room' && S.view !== 'match'); }
+    function onOffline() { showNet(true); }
+    function onOnline() { if (S.dead) return; S.retry = 0; clearTimeout(retryT); if (ws) { try { ws.onclose = null; ws.close(); } catch (e) { /* ignore */ } ws = null; } connect(); }
+    window.addEventListener('offline', onOffline); window.addEventListener('online', onOnline);
     function shutdown() {
       S.dead = true; clearTimeout(retryT); clearInterval(tick);
+      window.removeEventListener('offline', onOffline); window.removeEventListener('online', onOnline); netBanner.remove();
       document.removeEventListener('as:prefs', onPrefs);
       cleanupView();
       if (ws) { try { ws.onclose = null; ws.close(); } catch (e) { /* ignore */ } ws = null; }
@@ -157,9 +165,9 @@
       if (!AS_CONFIG.configured) { S.conn = 'noserver'; S.view = 'status'; render(); return; }
       S.conn = 'connecting'; if (S.view !== 'room' && S.view !== 'match') { S.view = 'status'; render(); }
       try { ws = new WebSocket(AS_CONFIG.wsUrl + '/ws'); } catch (e) { scheduleRetry(); return; }
-      ws.onopen = function () { S.retry = 0; send({ t: 'hello', pid: pid, name: S.name }); };
+      ws.onopen = function () { S.retry = 0; showNet(false); send({ t: 'hello', pid: pid, name: S.name }); };
       ws.onmessage = function (ev) { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } handle(m); };
-      ws.onclose = function () { if (S.dead) return; S.conn = 'closed'; if (chat) chat.setDisabled(t('chat.connecting')); scheduleRetry(); };
+      ws.onclose = function () { if (S.dead) return; S.conn = 'closed'; showNet(true); if (chat) chat.setDisabled(t('chat.connecting')); scheduleRetry(); };
       ws.onerror = function () { /* onclose 會處理 */ };
     }
     function scheduleRetry() {

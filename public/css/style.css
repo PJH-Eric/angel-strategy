@@ -481,3 +481,6 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
 @media (max-width: 400px) { .ops { grid-template-columns: repeat(4, 1fr); } }   /* 小手機：運算鍵排兩列，按鍵仍夠大 */
 .pad-grid .btn { min-width: 0; }
 .play .row.is-cur > .label { color: var(--cyan); text-decoration: underline; text-underline-offset: 4px; }
+.net-banner { position: fixed; top: calc(var(--safe-t) + 54px); left: 50%; width: max-content; transform: translateX(-50%); z-index: 850; display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 24px); padding: 8px 14px; background: #3a1512; border: 1px solid var(--red); color: #ffd7d3; font-size: .9em; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+.net-banner[hidden] { display: none; }
+.net-banner .ic { color: var(--red); }
