@@ -21,6 +21,9 @@
   }
 
   /* 按鈕 */
+  const COARSE = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+  // iOS 需要有 touchstart 監聽 :active 按壓樣式才會即時出現
+  document.addEventListener('touchstart', function () {}, { passive: true });
   function button(label, opts) {
     opts = opts || {};
     const b = el('button', { type: 'button', class: 'btn ' + (opts.cls || ''), 'aria-label': opts.aria || null, title: opts.title || null });
@@ -29,6 +32,7 @@
     b.addEventListener('click', function (e) {
       if (b.disabled || b.classList.contains('is-disabled')) return;
       Audio2.sfx('click');
+      if (COARSE) Audio2.vibrate(6);        // 觸控裝置：輕觸回饋
       if (opts.onClick) opts.onClick(e);
     });
     if (opts.disabled) b.disabled = true;

@@ -137,7 +137,12 @@
     function text() { return st.tokens.map(function (x) { return x.s; }).join(''); }
     function draw() {
       expr.textContent = '';
-      st.tokens.forEach(function (x) { expr.appendChild(el('span', { text: x.s })); });
+      // 觸控：直接點算式中的任一項即可刪除它（數字會回到下方）
+      st.tokens.forEach(function (x, k) {
+        const sp = el('button', { type: 'button', class: 'tok', 'aria-label': t('play.back') + ' ' + x.s, text: x.s });
+        sp.addEventListener('click', function () { commit(); const rm = st.tokens.splice(k, 1)[0]; if (rm && rm.chip != null) st.used = st.used.filter(function (c) { return c !== rm.chip; }); Audio2.sfx('key'); draw(); });
+        expr.appendChild(sp);
+      });
       if (buf) expr.appendChild(el('span', { style: 'opacity:.55', text: buf }));
       if (!st.tokens.length && !buf) expr.appendChild(el('span', { class: 'muted', style: 'font-size:.6em', text: '…' }));
       chips.forEach(function (c, i) { c.classList.toggle('used', st.used.indexOf(i) !== -1); });
@@ -236,7 +241,7 @@
     const slots = [];
     for (let i = 0; i < puzzle.m; i++) {
       const b = el('button', { type: 'button', class: 'slot wide', 'aria-label': R.SHAPES[i] });
-      b.addEventListener('click', function () { st.cur = i; draw(); });
+      b.addEventListener('click', function () { if (st.cur === i && st.assign[i] != null) st.assign[i] = null; st.cur = i; Audio2.sfx('key'); draw(); });
       slots.push(b); slotsEl.appendChild(b);
     }
     const bagBtns = puzzle.bag.map(function (w) { return UI.button(String(w), { cls: 'num', onClick: function () { put(w); } }); });
