@@ -317,8 +317,8 @@
     function renderLobby() {
       const nameBtn = UI.button(S.name, { cls: 'ghost small', icon: 'edit', onClick: renameModal });
       roomsHost = el('div', { class: 'room-list' });
-      const top = el('div', { class: 'row' }, [
-        el('div', { class: 'grow' }, [el('div', { class: 'label', text: t('on.name') }), nameBtn]),
+      const top = el('div', { class: 'row lobby-top' }, [
+        el('div', { class: 'grow lobby-name' }, [el('div', { class: 'label', text: t('on.name') }), nameBtn]),
         UI.button(t('on.quick'), { cls: '', onClick: quickJoin }),
         UI.button(t('on.create'), { cls: 'primary', icon: 'plus', onClick: createModal })
       ]);
@@ -348,7 +348,7 @@
     function quickJoin() {
       const r = S.rooms.filter(function (x) { return x.state === 'room' && x.players < x.max; })[0];
       if (r) send({ t: 'room:join', id: r.id, role: 'play', name: S.name });
-      else send({ t: 'room:create', name: '', format: 'chips', rounds: 10, timeSec: 30 });
+      else send({ t: 'room:create', name: t('room.defaultName', { n: S.name }), format: 'chips', rounds: 10, timeSec: 30 });
     }
     function createModal() {
       const c = { format: 'chips', rounds: 10, timeSec: 30 };
@@ -370,7 +370,7 @@
           el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.rounds') }), el('div', { class: 'stepper' }, [mkStep(function () { return c.rounds; }, function (v) { c.rounds = v; }, 3, 20, 1)[0], rounds, mkStep(function () { return c.rounds; }, function (v) { c.rounds = v; }, 3, 20, 1)[1]])]),
           el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.timer') }), el('div', { class: 'stepper' }, [mkStep(function () { return c.timeSec; }, function (v) { c.timeSec = v; }, 10, 90, 5)[0], secs, mkStep(function () { return c.timeSec; }, function (v) { c.timeSec = v; }, 10, 90, 5)[1]])])
         ],
-        footer: [UI.button(t('common.cancel'), { cls: 'ghost', onClick: function () { m.close(); } }), UI.button(t('room.create'), { cls: 'primary', onClick: function () { m.close(); send({ t: 'room:create', name: nameF.input.value, format: c.format, rounds: c.rounds, timeSec: c.timeSec }); } })]
+        footer: [UI.button(t('common.cancel'), { cls: 'ghost', onClick: function () { m.close(); } }), UI.button(t('room.create'), { cls: 'primary', onClick: function () { m.close(); send({ t: 'room:create', name: nameF.input.value.trim() || t('room.defaultName', { n: S.name }), format: c.format, rounds: c.rounds, timeSec: c.timeSec }); } })]
       });
       draw();
     }

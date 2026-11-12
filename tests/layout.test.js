@@ -62,6 +62,29 @@ const CHECK = function () {
     if ((tag === 'BUTTON' || tag === 'A') && r.width < 32 && r.height < 32 && !el.closest('svg')) out.push('按鈕太小（' + Math.round(r.width) + '×' + Math.round(r.height) + '）：' + String(el.className).slice(0, 30));
     if (el.classList.contains('overlay') || el.classList.contains('dialog')) { if (r.bottom > vh + 1 && !clipped(el)) out.push('對話框超出高度'); }
   });
+  // 互相重疊的按鈕／標籤／輸入框（浮動聊天氣泡與 SVG 除外；有對話框時只檢查對話框內）
+  // 只比較「真的看得到」的部分：與所有會裁切的祖先容器取交集
+  const visRect = function (e) {
+    const r = e.getBoundingClientRect(); let L = r.left, T = r.top, R = r.right, B = r.bottom;
+    for (let p = e.parentElement; p && p !== document.body; p = p.parentElement) {
+      const cs = getComputedStyle(p);
+      if (/(hidden|auto|scroll|clip)/.test(cs.overflow + cs.overflowX + cs.overflowY)) { const q = p.getBoundingClientRect(); L = Math.max(L, q.left); T = Math.max(T, q.top); R = Math.min(R, q.right); B = Math.min(B, q.bottom); }
+    }
+    return { left: L, top: T, right: R, bottom: B };
+  };
+  const scope = document.querySelector('.overlay') || document;
+  const items = [].slice.call(scope.querySelectorAll('.btn, .label, .field input, h3, .chip, .kind-tag, .badge')).filter(function (e) {
+    if (e.closest('svg,.lc-bubble,.toast,.menu-pop,.lc-panel')) return false;
+    const cs = getComputedStyle(e), r = e.getBoundingClientRect();
+    return cs.visibility !== 'hidden' && cs.display !== 'none' && r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < vh;
+  });
+  for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+    const A = items[i], B = items[j];
+    if (A.contains(B) || B.contains(A)) continue;
+    const a = visRect(A), b = visRect(B);
+    const w = Math.min(a.right, b.right) - Math.max(a.left, b.left), h = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+    if (w > 3 && h > 3) out.push('重疊：' + (A.className || A.tagName).toString().slice(0, 24) + '「' + A.textContent.trim().slice(0, 10) + '」與 ' + (B.className || B.tagName).toString().slice(0, 24) + '「' + B.textContent.trim().slice(0, 10) + '」');
+  }
   return out;
 };
 

@@ -491,3 +491,4 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   #app::after { display: none; }
 }
+.lobby-top .lobby-name { min-width: 170px; }
