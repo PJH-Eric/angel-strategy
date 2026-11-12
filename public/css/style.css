@@ -442,3 +442,11 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
 .lc-empty > .ic { width: 34px; height: 34px; }
 .lc-empty p { margin: 0; }
 .lc-qrow { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+/* 怎麼玩：圖示卡片 */
+.how-sec h4 { margin: 4px 0 8px; color: var(--amber); letter-spacing: .1em; font-size: .92em; }
+.how-sec + .how-sec { margin-top: 14px; }
+.how-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 8px; }
+.how-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; background: rgba(30, 40, 48, .6); border: 1px solid var(--line); }
+.how-item > .ic { width: 28px; height: 28px; color: var(--cyan); margin-top: 2px; }
+.how-item b { display: block; font-size: .95em; }
+.how-item p { margin: 2px 0 0; font-size: .84em; color: var(--dim); line-height: 1.45; }

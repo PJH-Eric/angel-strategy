@@ -99,8 +99,20 @@
   }
 
   function openHow() {
+    // 圖示＋一句話的卡片清單，觸控裝置也好掃讀
+    const item = function (ic, title, desc) { return el('div', { class: 'how-item' }, [Icon.el(ic), el('div', null, [el('b', { text: title }), el('p', { text: desc })])]); };
+    const sec = function (title, items) { return el('section', { class: 'how-sec' }, [el('h4', { text: title }), el('div', { class: 'how-grid' }, items)]); };
+    const body = [
+      sec(t('how.modes'), [
+        item('solo', t('home.campaign'), t('howm.campaign')), item('daily', t('home.daily'), t('howm.daily')),
+        item('dice', t('home.random'), t('howm.random')), item('online', t('home.online'), t('howm.online'))
+      ]),
+      sec(t('how.kinds'), R.PUZZLE_KINDS.map(function (k) { return item(Icon.kind(k), t('kind.' + k), t('howk.' + k)); })),
+      sec(t('how.onlineGames'), ['num', 'auction', 'hilo', 'remove'].map(function (k) { return item(Icon.kind(k), t('m.k.' + k), t('howo.' + k)); })),
+      el('p', { class: 'muted', text: t('how.5') })
+    ];
     const m = UI.modal({ title: t('how.title'), top: true,
-      body: [1, 2, 3, 4, 5].map(function (n) { return el('p', { text: t('how.' + n) }); }),
+      body: body,
       footer: [UI.button(t('common.close'), { cls: 'primary', onClick: function () { m.close(); } })] });
   }
 
