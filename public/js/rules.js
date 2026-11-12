@@ -5,7 +5,7 @@
  * 本專案全程沒有電腦對手；單機只有單人解題，博弈類只存在於線上真人對局。
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports) { module.exports = factory(); require('./kinds.js').install(module.exports); }
   else root.AngelRules = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
@@ -357,9 +357,31 @@
     return { type: 'arith', diff: diff, numbers: [2, 3, 4].slice(0, cfg.k).concat(new Array(Math.max(0, cfg.k - 3)).fill(1)), target: 14, solution: '2+3*4' };
   }
 
+  /* ---------- 題型登錄表（kinds.js 會補上其餘題型） ---------- */
+  const registry = {
+    deduce: {
+      gen: function (rand, diff, tier) { return genDeduce(rand, diff, tier); },
+      check: function (p, a) { return { ok: checkDeduce(p, a) }; },
+      explain: function (p, lang) { return explainDeduce(p, lang); },
+      hint: function (p, n, lang) { const h = deduceHint(p, []); void n; return h ? (lang === 'en' ? 'Position ' : '第 ') + (h.pos + 1) + (lang === 'en' ? ' is ' : ' 位是 ') + h.digit : ''; }
+    },
+    arith: {
+      gen: function (rand, diff, tier) { return genArith(rand, diff, tier); },
+      check: function (p, a) { return checkArith(p, a); },
+      explain: function () { return null; },
+      hint: function (p, n) { const s = parseArith(p.solution).steps; return s[Math.min(n, s.length - 1)]; }
+    }
+  };
+  const PUZZLE_KINDS = ['deduce', 'arith', 'near', 'rule', 'scale', 'pyramid'];
+  function checkPuzzle(p, answer) { return registry[p.type].check(p, answer); }
+  function explainPuzzle(p, lang) { return p.type === 'arith' ? explainArith(p) : registry[p.type].explain(p, lang); }
+  function hintPuzzle(p, n, lang) { return registry[p.type].hint(p, n, lang); }
+
   /* ---------- 關卡、時限、星等 ---------- */
   function isBoss(level) { return level % BOSS_EVERY === 0; }
-  function levelKind(level) { return isBoss(level) ? 'boss' : (level % 2 === 1 ? 'deduce' : 'arith'); }
+  const KIND_CYCLE = ['deduce', 'arith', 'pyramid', 'rule', 'near', 'scale', 'deduce', 'arith'];
+  const BOSS_SETS = [['deduce', 'arith', 'deduce'], ['rule', 'pyramid', 'near'], ['scale', 'deduce', 'arith'], ['near', 'rule', 'scale'], ['pyramid', 'scale', 'arith']];
+  function levelKind(level) { return isBoss(level) ? 'boss' : KIND_CYCLE[(level - 1) % KIND_CYCLE.length]; }
   function tierOf(level) { return Math.floor((level - 1) / BOSS_EVERY); }
 
   const TIME_BASE = { baby: null, easy: 150, normal: 120, hard: 100, myth: 80 };
@@ -374,7 +396,7 @@
   function hintLimit(diff) { return HINTS[diff]; }
 
   function buildPuzzle(kind, rand, diff, tier) {
-    return kind === 'deduce' ? genDeduce(rand, diff, tier) : genArith(rand, diff, tier);
+    return registry[kind].gen(rand, diff, tier);
   }
 
   // 單人關卡題目：boss 為三題連解（推理、算式、推理）
@@ -383,7 +405,7 @@
     const tier = tierOf(level);
     const kind = levelKind(level);
     if (kind === 'boss') {
-      return [buildPuzzle('deduce', rand, diff, tier), buildPuzzle('arith', rand, diff, tier), buildPuzzle('deduce', rand, diff, tier)];
+      return BOSS_SETS[tier % BOSS_SETS.length].map(function (k) { return buildPuzzle(k, rand, diff, tier); });
     }
     return [buildPuzzle(kind, rand, diff, tier)];
   }
@@ -405,7 +427,8 @@
   }
   function dailyPuzzles(dateStr, diff) {
     const rand = makeRng('daily:' + dateStr + ':' + diff);
-    return [buildPuzzle('deduce', rand, diff, 1), buildPuzzle('arith', rand, diff, 1), buildPuzzle('deduce', rand, diff, 2)];
+    // 每天從六種題型中抽 4 種不重複的題
+    return rand.shuffle(PUZZLE_KINDS).slice(0, 4).map(function (k, i) { return buildPuzzle(k, rand, diff, 1 + (i > 2 ? 1 : 0)); });
   }
   function dailyTimeLimitSec(diff) {
     const base = TIME_BASE[diff];
@@ -497,13 +520,17 @@
   // 對局回合計畫：深度優先交錯三種題型
   function buildRoundPlan(seed, rounds, nPlayers) {
     const rand = makeRng('plan:' + seed);
-    const cycle = ['num', 'deduce', 'num', 'arith', 'num', 'deduce', 'arith'];
+    const cycle = ['num', 'deduce', 'auction', 'hilo', 'arith', 'remove', 'num', 'rule', 'auction', 'pyramid', 'hilo', 'scale', 'near', 'remove'];
     const plan = [];
     for (let i = 0; i < rounds; i++) {
       const kind = cycle[i % cycle.length];
       if (kind === 'num') {
         const mode = NUM_MODES[Math.floor(i / 2) % NUM_MODES.length];
         plan.push({ kind: 'num', params: numGameParams(mode, nPlayers, rand) });
+      } else if (kind === 'auction') {
+        plan.push({ kind: 'auction', params: { prize: rand.int(1, 3) }, seed: rand.int(1, 1e9) });
+      } else if (kind === 'hilo' || kind === 'remove') {
+        plan.push({ kind: kind, params: {}, seed: rand.int(1, 1e9) });
       } else {
         const diff = i < 3 ? 'easy' : (i < 8 ? 'normal' : 'hard');
         const puzzle = buildPuzzle(kind, rand, diff, Math.floor(i / 3));
@@ -515,16 +542,17 @@
   function publicPuzzle(p) {
     if (!p) return p;
     const copy = JSON.parse(JSON.stringify(p));
-    delete copy.solution;
+    delete copy.solution; delete copy.secret; delete copy.solutions;
     return copy;
   }
 
   /* ---------- 對局賽制 ---------- */
   const CHIP_START = 6;
+  const BANK_START = 30;
   function newMatch(ids, format, rounds) {
     if (FORMATS.indexOf(format) === -1) throw new Error('bad format');
     const players = {};
-    ids.forEach(function (id) { players[id] = { score: 0, chips: format === 'chips' ? CHIP_START : 0, alive: true, out: null }; });
+    ids.forEach(function (id) { players[id] = { score: 0, chips: format === 'chips' ? CHIP_START : 0, bank: BANK_START, alive: true, out: null }; });
     return { format: format, rounds: rounds, round: 0, players: players, finished: false, winners: [] };
   }
   function aliveIds(m) { return Object.keys(m.players).filter(function (id) { return m.players[id].alive; }); }
@@ -601,6 +629,7 @@
     levelPuzzles: levelPuzzles, starsFor: starsFor,
     taipeiDate: taipeiDate, dailyPuzzles: dailyPuzzles, dailyTimeLimitSec: dailyTimeLimitSec,
     pointsForRank: pointsForRank, rankByKey: rankByKey, numGameParams: numGameParams, resolveNumGame: resolveNumGame, resolveRace: resolveRace,
+    registry: registry, PUZZLE_KINDS: PUZZLE_KINDS, checkPuzzle: checkPuzzle, explainPuzzle: explainPuzzle, hintPuzzle: hintPuzzle, BANK_START: BANK_START,
     buildRoundPlan: buildRoundPlan, publicPuzzle: publicPuzzle,
     newMatch: newMatch, applyRound: applyRound, aliveIds: aliveIds,
     cleanText: cleanText

@@ -4,6 +4,14 @@ const assert = require('assert');
 const { createHub } = require('../lib/hub.js');
 const R = require('../public/js/rules.js');
 
+const PICKS = ['num', 'auction', 'hilo', 'remove'];
+function pickFor(cur, i, p) {
+  if (cur.kind === 'num') return cur.params.min + ((i * 7 + cur.index) % (cur.params.max - cur.params.min + 1));
+  if (cur.kind === 'auction') return 2 + i;
+  if (cur.kind === 'hilo') return ['H', 'L', 'M'][i % 3];
+  return [0, 1];
+}
+
 let passed = 0, failed = 0;
 const queue = [];
 function t(name, fn) { queue.push({ name: name, fn: fn }); }
@@ -100,10 +108,10 @@ t('完整對局：題目不洩漏解答、回合後公開解法、觀戰收到�
     const cur = r.match.cur;
     if (!cur || cur.index === acted) continue;
     acted = cur.index;                                   // 每回合只行動一次（避免重置防刷計時）
-    if (cur.kind === 'num') {
-      players.forEach(function (p, i) { p.say({ t: 'm:pick', v: cur.params.min + ((i * 7 + cur.index) % (cur.params.max - cur.params.min + 1)) }); });
+    if (PICKS.indexOf(cur.kind) !== -1) {
+      players.forEach(function (p, i) { p.say({ t: 'm:pick', v: pickFor(cur, i, p) }); });
     } else {
-      a.say({ t: 'm:solve', answer: cur.kind === 'deduce' ? [9, 9, 9] : '1+1' });      // A 先答錯一次
+      a.say({ t: 'm:solve', answer: cur.kind === 'deduce' ? [9, 9, 9] : (cur.kind === 'scale' ? [99, 99, 99, 99, 99] : '1+1') });      // A 先答錯一次
       b.say({ t: 'm:solve', answer: cur.puzzle.solution });
       c.say({ t: 'm:solve', answer: cur.puzzle.solution });
       setTimeout(function () { if (r.match.cur === cur) a.say({ t: 'm:solve', answer: cur.puzzle.solution }); }, 320);
@@ -114,10 +122,20 @@ t('完整對局：題目不洩漏解答、回合後公開解法、觀戰收到�
   rounds.forEach(function (m) {
     assert.strictEqual(JSON.stringify(m).indexOf('"solution"'), -1, '進行中的題目不得含解答');
   });
+  rounds.forEach(function (m) {
+    if (m.cur.kind === 'hilo') {
+      assert.ok(m.cur.view && !(a.pid in m.cur.view.others) && Object.keys(m.cur.view.others).length === 2, '大或小：只看得到別人的牌');
+    }
+    if (m.cur.kind === 'remove') assert.ok(m.cur.view && m.cur.view.hand.length === 4);
+  });
+  sp.all('round').forEach(function (m) { assert.strictEqual(m.cur.view, undefined, '觀戰者不得看到暗牌'); });
   const ends = a.all('roundEnd');
   assert.strictEqual(ends.length, 7);
+  ends.filter(function (e) { return e.kind === 'auction'; }).forEach(function (e) {
+    Object.keys(e.players).forEach(function (id) { assert.ok(e.players[id].bank >= 0 && e.players[id].bank <= R.BANK_START); });
+  });
   ends.forEach(function (e) {
-    if (e.kind !== 'num') assert.ok(e.puzzle && e.puzzle.solution, '回合結束要公開完整解法');
+    if (PICKS.indexOf(e.kind) === -1) assert.ok(e.puzzle && e.puzzle.solution, '回合結束要公開完整解法');
     else assert.ok(e.picks && e.info);
   });
   assert.ok(a.last('matchEnd'));
@@ -143,7 +161,7 @@ t('逾時未出手 0 分；籌碼制歸零者出局，剩一人即結束', async
     const cur = r.match.cur;
     if (!cur) continue;
     // 只有 A 出手，B 一律逾時
-    if (cur.kind === 'num') a.say({ t: 'm:pick', v: cur.params.min });
+    if (PICKS.indexOf(cur.kind) !== -1) a.say({ t: 'm:pick', v: pickFor(cur, 0, a) });
     else a.say({ t: 'm:solve', answer: cur.puzzle.solution });
   }
   assert.ok(r.match.core.finished);

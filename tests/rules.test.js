@@ -27,10 +27,13 @@ t('五段難度 × 50 關：每題可產生、推理題唯一解、算式題解�
           const ex = R.explainDeduce(p, 'zh');
           assert.ok(ex.steps.length >= 1);
           assert.strictEqual(ex.steps[ex.steps.length - 1].remain, 1, '最後一條線索後只剩一個可能');
-        } else {
+        } else if (p.type === 'arith') {
           assert.ok(R.checkArith(p, p.solution).ok, '算式題解法須成立 ' + diff + lv + ' ' + p.solution);
           const ex = R.explainArith(p);
           assert.ok(ex.steps.length === p.numbers.length - 1, '逐步運算數 = 數字數 − 1');
+        } else {
+          assert.ok(R.checkPuzzle(p, p.solution).ok, p.type + ' 解法須成立 ' + diff + lv);
+          assert.ok(R.explainPuzzle(p, 'zh'), p.type + ' 須有解法說明');
         }
       });
     }
@@ -41,7 +44,8 @@ t('每日挑戰同一天同難度結果相同、不同天不同', () => {
   const a = R.dailyPuzzles('2026-11-12', 'normal'), b = R.dailyPuzzles('2026-11-12', 'normal'), c = R.dailyPuzzles('2026-11-13', 'normal');
   assert.deepStrictEqual(a, b);
   assert.notDeepStrictEqual(a, c);
-  assert.strictEqual(a.length, 3);
+  assert.strictEqual(a.length, 4);
+  assert.strictEqual(new Set(a.map((p) => p.type)).size, 4, '每日四題型別不重複');
 });
 
 t('台北時間切日', () => {
@@ -137,9 +141,11 @@ t('回合計畫：型別交錯、推理題唯一解、公開版本不含解答',
   assert.strictEqual(plan.length, 12);
   plan.forEach((rd) => {
     if (rd.kind === 'num') assert.ok(R.NUM_MODES.indexOf(rd.params.mode) !== -1);
+    else if (['auction', 'hilo', 'remove'].indexOf(rd.kind) !== -1) assert.ok(!rd.puzzle);
     else {
       const pub = R.publicPuzzle(rd.puzzle);
       assert.strictEqual(pub.solution, undefined);
+      assert.strictEqual(pub.secret, undefined);
       assert.ok(rd.puzzle.solution);
     }
   });
