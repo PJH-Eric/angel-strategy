@@ -1,10 +1,601 @@
-/* 線上模組（階段三實作中）。目前僅提供佔位畫面，避免首頁按鈕報錯。 */
+/* 線上模組：連線、大廳（含大廳聊天室）、房間、對局、觀戰、邀請連結。
+ * 只有進入此畫面才會連線；離開（回首頁／返回）立即關閉連線與計時器。沒有 presence API。 */
 (function () {
   'use strict';
-  const el = UI.el, t = function (k, v) { return I18N.t(k, v); };
-  App.screens.online = function (ctx) {
+  const R = AngelRules, el = UI.el, t = function (k, v) { return I18N.t(k, v); };
+  const QUICK = ['chat.q1', 'chat.q2', 'chat.q3', 'chat.q4', 'chat.q5', 'chat.q6', 'chat.q7'];
+
+  function errText(code) { const k = 'err.' + code; const s = t(k); return s === k ? t('err.generic') : s; }
+  function narrow() { return window.matchMedia('(max-width: 700px), (max-height: 520px)').matches; }
+
+  /* ---------- 聊天面板（大廳與房間共用） ---------- */
+  function ChatPanel(o) {
+    const host = document.getElementById('app');
+    const wrap = el('div');
+    host.appendChild(wrap);
+    let open = o.persist ? Store.getChatOpen() : false;
+    let unread = 0, atBottom = true, previewT = null, bubbleEl = null;
+    const msgsEl = el('div', { class: 'lc-msgs' });
+    const sa = UI.scrollArea(msgsEl, { label: o.title() });
+    let onlineN = null, disabledText = '';
+    const me = Store.getPid();
+
+    function line(m) {
+      if (m.sys) {
+        const row = el('div', { class: 'lc-msg sys' }, [el('span', { text: t('chat.sys.room', { n: m.name, r: m.room.name }) })]);
+        if (o.onJoin) row.appendChild(UI.button(t('on.join'), { cls: 'small primary', onClick: function () { setOpen(false); o.onJoin(m.room.id); } }));
+        return row;
+      }
+      const mine = m.pid === me;
+      return el('div', { class: 'lc-msg' + (mine ? ' me' : '') }, [el('span', { class: 'who', text: m.name + (mine ? t('chat.me') : '') }), el('time', { text: m.hhmm || '' }), el('div', { text: m.text })]);
+    }
+    function redraw() {
+      msgsEl.textContent = '';
+      o.msgs().forEach(function (m) { msgsEl.appendChild(line(m)); });
+      sa.sync();
+      if (atBottom) sa.view.scrollTop = sa.view.scrollHeight;
+    }
+    sa.view.addEventListener('scroll', function () {
+      atBottom = sa.view.scrollTop + sa.view.clientHeight >= sa.view.scrollHeight - 24;
+      if (atBottom) { unread = 0; newBtn.style.display = 'none'; }
+    });
+    const newBtn = UI.button('', { cls: 'small primary lc-new', onClick: function () { atBottom = true; sa.view.scrollTop = sa.view.scrollHeight; unread = 0; newBtn.style.display = 'none'; } });
+    newBtn.style.display = 'none';
+
+    const input = UI.input({ placeholder: t('chat.ph'), max: 60, label: t('chat.ph') });
+    function submit() {
+      const v = input.input.value.trim();
+      if (!v || disabledText) return;
+      o.onSend(v); input.input.value = '';
+    }
+    input.input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } e.stopPropagation(); });
+    const quickBtn = UI.button('⚡', { cls: 'small ghost', aria: t('chat.quick'), onClick: function () {
+      UI.menu(quickBtn, QUICK.map(function (k) { return { id: k, label: t(k) }; }), function (k) { if (!disabledText) o.onSend(t(k)); });
+    } });
+    const title = el('b');
+    const closeBtn = UI.button('✕', { cls: 'small ghost icon', aria: t('common.close'), onClick: function () { setOpen(false); } });
+    const head = el('header', null, [title, o.onRename ? UI.button('✎', { cls: 'small ghost icon', aria: t('chat.rename'), onClick: o.onRename }) : null, closeBtn]);
+    const panel = el('div', { class: 'lc-panel', role: 'dialog', 'aria-label': t('chat.title') }, [
+      head, el('div', { class: 'lc-body' }, [sa, newBtn]),
+      el('div', { class: 'lc-input' }, [quickBtn, input, UI.button(t('chat.send'), { cls: 'small primary', onClick: submit })])
+    ]);
+    let sy = null;
+    head.addEventListener('touchstart', function (e) { sy = e.touches[0].clientY; }, { passive: true });
+    head.addEventListener('touchend', function (e) { if (sy != null && e.changedTouches[0].clientY - sy > 60) setOpen(false); sy = null; });
+
+    function drawTitle() {
+      title.textContent = onlineN != null ? t('chat.title.n', { n: onlineN }) : o.title();
+      input.input.disabled = !!disabledText;
+      input.input.placeholder = disabledText || t('chat.ph');
+    }
+    function popped() { if (open && narrow()) setOpen(false, true); }
+    window.addEventListener('popstate', popped);
+    function setOpen(v, fromPop) {
+      open = v; if (o.persist) Store.setChatOpen(v);
+      if (v && narrow() && !fromPop) { try { history.pushState({ lc: 1 }, ''); } catch (e) { /* ignore */ } }
+      if (!v && narrow() && !fromPop && history.state && history.state.lc) { try { history.back(); } catch (e) { /* ignore */ } }
+      if (v) { unread = 0; atBottom = true; }
+      draw();
+    }
+    function draw() {
+      wrap.textContent = '';
+      if (o.hidden && o.hidden()) return;
+      if (open) {
+        wrap.appendChild(panel); drawTitle(); redraw();
+        setTimeout(function () { sa.sync(); sa.view.scrollTop = sa.view.scrollHeight; }, 0);
+      } else {
+        bubbleEl = el('div', { class: 'lc-bubble' }, [UI.button('💬', { cls: 'icon', aria: t('chat.title'), onClick: function () { setOpen(true); } })]);
+        wrap.appendChild(bubbleEl);
+      }
+    }
+    draw();
+    return {
+      refresh: function () { drawTitle(); if (open) redraw(); },
+      redraw: draw,
+      push: function (m) {
+        if (open) {
+          msgsEl.appendChild(line(m)); sa.sync();
+          if (atBottom) sa.view.scrollTop = sa.view.scrollHeight;
+          else { unread++; newBtn.textContent = t('chat.new', { n: unread }); newBtn.style.display = ''; }
+        } else if (!(o.hidden && o.hidden()) && bubbleEl) {
+          bubbleEl.classList.remove('bounce'); void bubbleEl.offsetWidth; bubbleEl.classList.add('bounce');
+          const old = bubbleEl.querySelector('.lc-preview'); if (old) old.remove();
+          bubbleEl.appendChild(el('div', { class: 'lc-preview', text: m.sys ? t('chat.sys.room', { n: m.name, r: m.room.name }) : m.name + '：' + m.text }));
+          clearTimeout(previewT);
+          previewT = setTimeout(function () { const p = bubbleEl && bubbleEl.querySelector('.lc-preview'); if (p) p.remove(); }, 3000);
+        }
+      },
+      setOnline: function (n) { onlineN = n; drawTitle(); },
+      setDisabled: function (txt) { disabledText = txt || ''; drawTitle(); },
+      destroy: function () { window.removeEventListener('popstate', popped); clearTimeout(previewT); wrap.remove(); }
+    };
+  }
+
+  /* ---------- 畫面 ---------- */
+  App.screens.online = function (ctx, params) {
+    const S = {
+      conn: 'connecting', view: 'connecting', name: Store.getName(), rooms: [], room: null, role: null,
+      lobbyMsgs: [], lobbyOnline: null, roomMsgs: [], match: null, offset: 0, picked: false, solved: false, done: [],
+      invite: params && params.invite ? params.invite : null, inviteBad: false, leftMatch: false, dead: false, retry: 0
+    };
+    let ws = null, retryT = null, tick = null, widget = null, chat = null, finalDlg = null, M = null;
+    const pid = Store.getPid();
+
     ctx.setTitle(t('on.title'));
-    ctx.setBack(function () { App.go('home'); });
-    ctx.screen.appendChild(el('div', { class: 'pad' }, [el('p', { class: 'muted', text: t('on.connecting') })]));
+    ctx.setBack(leaveToHome);
+    ctx.onDestroy(shutdown);
+    ctx.onRerender(function () { render(); });
+    document.addEventListener('as:prefs', onPrefs);
+
+    function onPrefs() { if (chat) chat.redraw(); }
+    function shutdown() {
+      S.dead = true; clearTimeout(retryT); clearInterval(tick);
+      document.removeEventListener('as:prefs', onPrefs);
+      cleanupView();
+      if (ws) { try { ws.onclose = null; ws.close(); } catch (e) { /* ignore */ } ws = null; }
+    }
+    function leaveToHome() {
+      if (S.room) send({ t: 'room:leave' });
+      App.go('home');
+    }
+
+    /* ----- 連線 ----- */
+    function send(o) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+    function connect() {
+      if (S.dead) return;
+      if (!AS_CONFIG.configured) { S.conn = 'noserver'; S.view = 'status'; render(); return; }
+      S.conn = 'connecting'; if (S.view !== 'room' && S.view !== 'match') { S.view = 'status'; render(); }
+      try { ws = new WebSocket(AS_CONFIG.wsUrl + '/ws'); } catch (e) { scheduleRetry(); return; }
+      ws.onopen = function () { S.retry = 0; send({ t: 'hello', pid: pid, name: S.name }); };
+      ws.onmessage = function (ev) { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } handle(m); };
+      ws.onclose = function () { if (S.dead) return; S.conn = 'closed'; if (chat) chat.setDisabled(t('chat.connecting')); scheduleRetry(); };
+      ws.onerror = function () { /* onclose 會處理 */ };
+    }
+    function scheduleRetry() {
+      if (S.dead) return;
+      S.conn = 'closed';
+      if (S.view === 'status') render();
+      clearTimeout(retryT);
+      retryT = setTimeout(connect, Math.min(8000, 1000 * Math.pow(2, S.retry++)));
+    }
+
+    /* ----- 訊息處理 ----- */
+    function handle(m) {
+      switch (m.t) {
+        case 'hello':
+          S.conn = 'open'; S.name = m.name;
+          if (S.room) break;                                   // 重連：等伺服器回傳房間快照
+          if (S.invite) { S.view = 'invite'; render(); } else { S.view = 'lobby'; render(); send({ t: 'lobbychat', op: 'join' }); }
+          break;
+        case 'lobby': S.rooms = m.rooms; if (S.view === 'lobby') drawRooms(); break;
+        case 'lobbychat':
+          if (m.op === 'history') { S.lobbyMsgs = m.msgs; if (chat && S.view === 'lobby') chat.refresh(); }
+          else if (m.op === 'msg') { S.lobbyMsgs.push(m.msg); if (S.lobbyMsgs.length > 50) S.lobbyMsgs.shift(); if (chat && S.view === 'lobby') chat.push(m.msg); }
+          else if (m.op === 'online') { S.lobbyOnline = m.n; if (chat && S.view === 'lobby') chat.setOnline(m.n); }
+          break;
+        case 'joined': S.role = m.role; break;
+        case 'room': onRoom(m.room); break;
+        case 'roomchat': S.roomMsgs.push(m.msg); if (S.roomMsgs.length > 50) S.roomMsgs.shift(); if (chat && (S.view === 'room' || S.view === 'match')) chat.push(m.msg); break;
+        case 'left': case 'closed':
+          if (m.t === 'closed') UI.toast(t('on.roomClosed'), true);
+          else if (m.reason === 'kicked') UI.toast(t('room.kick'), true);
+          resetRoomState(); S.invite = null; S.view = 'lobby'; render(); send({ t: 'lobbychat', op: 'join' });
+          break;
+        case 'matchStart': S.leftMatch = false; if (S.match) { S.match.last = null; S.match.cur = null; S.match.finished = false; } if (finalDlg) { finalDlg.close(); finalDlg = null; } break;
+        case 'round': onRound(m); break;
+        case 'progress': S.done = m.done; drawBoard(); break;
+        case 'picked': S.picked = true; drawRoundStatus(); break;
+        case 'solved': S.solved = true; Audio2.sfx('ok'); drawRoundStatus(); break;
+        case 'wrong': if (widget) widget.bad(); Audio2.sfx('wrong'); Audio2.vibrate(80); UI.toast(t('play.wrong'), true); break;
+        case 'roundEnd': onRoundEnd(m); break;
+        case 'matchEnd': onMatchEnd(m); break;
+        case 'error': onError(m); break;
+        default: break;
+      }
+    }
+    function onError(m) {
+      if (m.code === 'chat_rate' || m.code === 'chat_dup') { UI.toast(errText(m.code), true); return; }
+      if (m.code === 'invite_invalid' || m.code === 'room_closed') {
+        if (S.view === 'invite') { S.inviteBad = true; render(); return; }
+      }
+      UI.toast(errText(m.code), true);
+    }
+    function resetRoomState() { S.room = null; S.role = null; S.match = null; S.roomMsgs = []; S.picked = false; S.solved = false; S.leftMatch = false; if (finalDlg) { finalDlg.close(); finalDlg = null; } }
+
+    function offsetFrom(now) { if (now) S.offset = now - Date.now(); }
+    function onRoom(room) {
+      const first = !S.room;
+      S.room = room;
+      S.roomMsgs = first && room.chat ? room.chat.slice() : S.roomMsgs;
+      if (room.match) {
+        const pm = room.match;
+        S.match = Object.assign(S.match || {}, { format: pm.format, rounds: pm.rounds, round: pm.round, finished: pm.finished, winners: pm.winners, players: pm.players, chipStart: pm.chipStart });
+        if (pm.cur) { S.match.cur = pm.cur; offsetFrom(pm.cur.now); S.done = pm.cur.done || []; }
+        if (!pm.cur && pm.last && !S.match.last) S.match.last = pm.last;
+        if (first && pm.cur) { S.picked = (pm.cur.done || []).indexOf(pid) !== -1; S.solved = S.picked; }
+      } else S.match = null;
+      const want = room.state === 'match' && !S.leftMatch ? 'match' : 'room';
+      if (S.view !== want || first) { if (finalDlg && want === 'room') { finalDlg.close(); finalDlg = null; } S.view = want; render(); if (want === 'match') resumeMatchUI(); }
+      else if (S.view === 'room') render();
+      else if (S.view === 'match') drawBoard();
+    }
+
+    /* ----- 共用小元件 ----- */
+    function nameOf(id) {
+      if (!S.room) return '?';
+      const p = S.room.players.concat(S.room.spectators).filter(function (x) { return x.pid === id; })[0];
+      return p ? p.name : '?';
+    }
+    function isHost() { return S.room && S.room.hostPid === pid; }
+    function cleanupView() {
+      if (widget) { widget.destroy(); widget = null; }
+      if (chat) { chat.destroy(); chat = null; }
+      clearInterval(tick); tick = null; M = null;
+    }
+    function mountChat(kind) {
+      if (kind === 'lobby') {
+        chat = ChatPanel({
+          persist: true, title: function () { return t('chat.title'); }, msgs: function () { return S.lobbyMsgs; },
+          hidden: function () { return !Store.settings.lobbyChat; },
+          onSend: function (text) { send({ t: 'lobbychat', op: 'send', text: text }); },
+          onJoin: function (id) { joinPublic(id); }, onRename: renameModal
+        });
+        if (S.lobbyOnline != null) chat.setOnline(S.lobbyOnline);
+        if (S.conn !== 'open') chat.setDisabled(t('chat.connecting'));
+      } else {
+        chat = ChatPanel({ title: function () { return t('room.chat'); }, msgs: function () { return S.roomMsgs; }, onSend: function (text) { send({ t: 'room:chat', text: text }); } });
+      }
+    }
+    function renameModal() {
+      const f = UI.input({ value: S.name, max: 12, label: t('set.name') });
+      const m = UI.modal({ title: t('set.name'), top: true, body: [f], footer: [
+        UI.button(t('common.cancel'), { cls: 'ghost', onClick: function () { m.close(); } }),
+        UI.button(t('common.ok'), { cls: 'primary', onClick: function () { const v = f.input.value.trim(); if (v) { S.name = v.slice(0, 12); Store.setName(S.name); send({ t: 'rename', name: S.name }); if (S.view === 'lobby') render(); } m.close(); } })
+      ] });
+    }
+
+    /* ----- 渲染 ----- */
+    function render() {
+      cleanupView();
+      ctx.screen.textContent = '';
+      ctx.setTitle(t('on.title'));
+      if (S.view === 'status') return renderStatus();
+      if (S.view === 'invite') return renderInvite();
+      if (S.view === 'lobby') return renderLobby();
+      if (S.view === 'room') return renderRoom();
+      if (S.view === 'match') return renderMatch();
+    }
+    function page(children) { const c = el('div', { class: 'stack pad' }, children); ctx.screen.appendChild(UI.scrollArea(c)); return c; }
+
+    function renderStatus() {
+      const noSrv = S.conn === 'noserver';
+      page([el('div', { class: 'panel stack center' }, [
+        el('p', { text: noSrv ? t('on.noServer') : (S.conn === 'closed' ? t('on.offline') : t('on.connecting')) }),
+        noSrv ? null : UI.button(t('on.retry'), { cls: 'primary', onClick: function () { S.retry = 0; clearTimeout(retryT); connect(); } })
+      ])]);
+    }
+
+    function renderInvite() {
+      const f = UI.input({ value: S.name, max: 12, label: t('on.inviteName') });
+      if (S.inviteBad) {
+        page([el('div', { class: 'panel stack center' }, [el('p', { text: t('on.inviteBad') }), UI.button(t('common.home'), { cls: 'primary', onClick: function () { S.invite = null; S.inviteBad = false; S.view = 'lobby'; render(); send({ t: 'lobbychat', op: 'join' }); } })])]);
+        return;
+      }
+      page([el('div', { class: 'panel stack' }, [
+        el('h3', { text: t('on.inviteTitle') }), el('div', { class: 'mono', text: '#' + S.invite.room }), f,
+        UI.button(t('on.join'), { cls: 'primary big block', onClick: function () {
+          S.name = f.input.value.trim().slice(0, 12) || S.name; Store.setName(S.name);
+          send({ t: 'room:join', id: S.invite.room, inv: S.invite.inv, name: S.name });
+        } })
+      ])]);
+    }
+
+    /* 大廳 */
+    let roomsHost = null;
+    function renderLobby() {
+      const nameBtn = UI.button('✎ ' + S.name, { cls: 'ghost small', onClick: renameModal });
+      roomsHost = el('div', { class: 'room-list' });
+      const top = el('div', { class: 'row' }, [
+        el('div', { class: 'grow' }, [el('div', { class: 'label', text: t('on.name') }), nameBtn]),
+        UI.button(t('on.quick'), { cls: '', onClick: quickJoin }),
+        UI.button(t('on.create'), { cls: 'primary', onClick: createModal })
+      ]);
+      ctx.screen.appendChild(el('div', { class: 'stack pad', style: 'flex:1;min-height:0' }, [top, el('div', { class: 'label', text: t('on.rooms') }), UI.scrollArea(roomsHost, { label: t('on.rooms') })]));
+      drawRooms();
+      mountChat('lobby');
+    }
+    function drawRooms() {
+      if (!roomsHost) return;
+      roomsHost.textContent = '';
+      if (!S.rooms.length) { roomsHost.appendChild(el('p', { class: 'muted center', text: t('on.none') })); return; }
+      S.rooms.forEach(function (r) {
+        const full = r.players >= r.max, playing = r.state !== 'room';
+        const row = el('div', { class: 'room-card' }, [
+          el('div', { class: 'grow' }, [el('b', { text: r.name }), el('span', { class: 'muted', style: 'font-size:.85em', text: r.host + ' ・ ' + t('room.fmt.' + r.format) + ' ・ ' + t('on.players', { n: r.players, m: r.max }) + (r.spectators ? ' ・ ' + t('on.spec', { n: r.spectators }) : '') })]),
+          el('span', { class: 'badge', text: playing ? t('on.playing') : t('on.waiting') })
+        ]);
+        row.appendChild(UI.button(full || playing ? t('on.watch') : t('on.join'), { cls: 'small ' + (full || playing ? '' : 'primary'), onClick: function () { send({ t: 'room:join', id: r.id, role: full || playing ? 'spec' : 'play', name: S.name }); } }));
+        roomsHost.appendChild(row);
+      });
+    }
+    function joinPublic(id) {
+      const r = S.rooms.filter(function (x) { return x.id === id; })[0];
+      const spec = !r || r.players >= r.max || r.state !== 'room';
+      send({ t: 'room:join', id: id, role: spec ? 'spec' : 'play', name: S.name });
+    }
+    function quickJoin() {
+      const r = S.rooms.filter(function (x) { return x.state === 'room' && x.players < x.max; })[0];
+      if (r) send({ t: 'room:join', id: r.id, role: 'play', name: S.name });
+      else send({ t: 'room:create', name: '', format: 'chips', rounds: 10, timeSec: 30 });
+    }
+    function createModal() {
+      const c = { format: 'chips', rounds: 10, timeSec: 30 };
+      const nameF = UI.input({ placeholder: t('room.name'), max: 16, label: t('room.name') });
+      const fmtBtn = UI.button('', { cls: 'ghost', onClick: function () {
+        UI.menu(fmtBtn, R.FORMATS.map(function (f) { return { id: f, label: t('room.fmt.' + f) }; }), function (f) { c.format = f; draw(); }, c.format);
+      } });
+      const help = el('p', { class: 'muted', style: 'font-size:.85em;margin:0' });
+      const rounds = el('b'), secs = el('b');
+      const mkStep = function (get, set, lo, hi, step) {
+        return [UI.button('−', { cls: 'small icon', onClick: function () { set(Math.max(lo, get() - step)); draw(); } }), UI.button('+', { cls: 'small icon', onClick: function () { set(Math.min(hi, get() + step)); draw(); } })];
+      };
+      function draw() { fmtBtn.textContent = t('room.fmt.' + c.format) + ' ▾'; help.textContent = t('room.fmtHelp.' + c.format, { c: R.CHIP_START }); rounds.textContent = c.rounds; secs.textContent = c.timeSec; }
+      const m = UI.modal({
+        title: t('on.create'), top: true,
+        body: [
+          nameF,
+          el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.format') }), fmtBtn]), help,
+          el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.rounds') }), el('div', { class: 'stepper' }, [mkStep(function () { return c.rounds; }, function (v) { c.rounds = v; }, 3, 20, 1)[0], rounds, mkStep(function () { return c.rounds; }, function (v) { c.rounds = v; }, 3, 20, 1)[1]])]),
+          el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.timer') }), el('div', { class: 'stepper' }, [mkStep(function () { return c.timeSec; }, function (v) { c.timeSec = v; }, 10, 90, 5)[0], secs, mkStep(function () { return c.timeSec; }, function (v) { c.timeSec = v; }, 10, 90, 5)[1]])])
+        ],
+        footer: [UI.button(t('common.cancel'), { cls: 'ghost', onClick: function () { m.close(); } }), UI.button(t('room.create'), { cls: 'primary', onClick: function () { m.close(); send({ t: 'room:create', name: nameF.input.value, format: c.format, rounds: c.rounds, timeSec: c.timeSec }); } })]
+      });
+      draw();
+    }
+
+    /* 房間 */
+    function inviteUrl(tok, role) { return location.origin + location.pathname + '?room=' + S.room.id + '&inv=' + encodeURIComponent(tok) + '&role=' + role; }
+    function copy(text) {
+      const done = function () { UI.toast(t('common.copied')); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { UI.toast(text); });
+      else UI.toast(text);
+    }
+    function renderRoom() {
+      const rm = S.room; if (!rm) return;
+      ctx.setTitle(rm.name, '#' + rm.id);
+      const host = isHost();
+      const players = el('div');
+      rm.players.forEach(function (p) {
+        const row = el('div', { class: 'player-row' + (p.connected ? '' : ' off') }, [
+          el('span', { class: 'nm', text: p.name + (p.pid === pid ? '（' + t('room.you') + '）' : '') }),
+          p.pid === rm.hostPid ? el('span', { class: 'badge', text: t('room.host') }) : null,
+          !p.connected ? el('span', { class: 'badge', style: 'border-color:var(--red);color:var(--red)', text: t('m.discon') }) : null
+        ]);
+        if (host && p.pid !== pid) row.appendChild(UI.button(t('room.kick'), { cls: 'small ghost danger', onClick: function () { send({ t: 'room:kick', pid: p.pid }); } }));
+        players.appendChild(row);
+      });
+      const specs = el('div');
+      rm.spectators.forEach(function (p) { specs.appendChild(el('div', { class: 'player-row', style: 'border-left-color:var(--dim)' }, [el('span', { class: 'nm', text: p.name + (p.pid === pid ? '（' + t('room.you') + '）' : '') })])); });
+
+      const s = rm.settings;
+      let settings;
+      if (host) {
+        const fmtBtn = UI.button(t('room.fmt.' + s.format) + ' ▾', { cls: 'ghost', onClick: function () {
+          UI.menu(fmtBtn, R.FORMATS.map(function (f) { return { id: f, label: t('room.fmt.' + f) }; }), function (f) { send({ t: 'room:settings', format: f }); }, s.format);
+        } });
+        const step = function (key, lo, hi, st, val) {
+          return el('div', { class: 'stepper' }, [UI.button('−', { cls: 'small icon', onClick: function () { const o = { t: 'room:settings' }; o[key] = Math.max(lo, val - st); send(o); } }), el('b', { text: String(val) }), UI.button('+', { cls: 'small icon', onClick: function () { const o = { t: 'room:settings' }; o[key] = Math.min(hi, val + st); send(o); } })]);
+        };
+        settings = el('div', null, [
+          el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.format') }), fmtBtn]),
+          el('p', { class: 'muted', style: 'font-size:.85em', text: t('room.fmtHelp.' + s.format, { c: R.CHIP_START }) }),
+          el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.rounds') }), step('rounds', 3, 20, 1, s.rounds)]),
+          el('div', { class: 'set-row' }, [el('div', { class: 'grow', text: t('room.timer') }), step('timeSec', 10, 90, 5, s.timeSec)])
+        ]);
+      } else {
+        settings = el('div', null, [
+          el('div', { class: 'row' }, [el('span', { class: 'badge', text: t('room.fmt.' + s.format) }), el('span', { class: 'badge', text: t('room.rounds') + ' ' + s.rounds }), el('span', { class: 'badge', text: s.timeSec + 's' })]),
+          el('p', { class: 'muted', style: 'font-size:.85em', text: t('room.fmtHelp.' + s.format, { c: R.CHIP_START }) })
+        ]);
+      }
+      const playUrl = inviteUrl(rm.inv.play, 'play'), specUrl = inviteUrl(rm.inv.spec, 'spec');
+      const invite = el('div', { class: 'stack' }, [
+        el('div', { class: 'label', text: t('room.invite') }),
+        el('div', { class: 'link-box', text: playUrl }),
+        el('div', { class: 'row' }, [UI.button(t('common.copy') + ' ' + t('on.join'), { cls: 'small', onClick: function () { copy(playUrl); } }), UI.button(t('common.copy') + ' ' + t('on.watch'), { cls: 'small ghost', onClick: function () { copy(specUrl); } }), host ? UI.button(t('room.revoke'), { cls: 'small ghost danger', onClick: function () { send({ t: 'room:revoke' }); } }) : null])
+      ]);
+      const mine = rm.players.some(function (p) { return p.pid === pid; });
+      const actions = el('div', { class: 'row' });
+      if (host && rm.state === 'room') actions.appendChild(UI.button(t('room.start'), { cls: 'primary big grow', disabled: rm.players.length < 2, onClick: function () { send({ t: 'room:start' }); } }));
+      else if (rm.state === 'room') actions.appendChild(el('span', { class: 'muted', text: t('room.waitStart') }));
+      else actions.appendChild(el('span', { class: 'muted', text: t('m.waitHost') }));
+      if (!mine && rm.state === 'room') actions.appendChild(UI.button(t('room.joinPlay'), { cls: 'small', onClick: function () { send({ t: 'room:role', role: 'play' }); } }));
+      if (mine && rm.players.length > 1 && rm.state === 'room') actions.appendChild(UI.button(t('room.toSpectate'), { cls: 'small ghost', onClick: function () { send({ t: 'room:role', role: 'spec' }); } }));
+      actions.appendChild(UI.button(t('room.leave'), { cls: 'small ghost danger', onClick: function () { send({ t: 'room:leave' }); } }));
+      if (host && rm.players.length < 2) actions.appendChild(el('div', { class: 'muted', style: 'width:100%;font-size:.85em', text: t('room.needTwo') }));
+      page([
+        el('div', { class: 'panel' }, [el('h3', { text: t('room.title') + ' ・ ' + rm.players.length + '/6' }), players, rm.spectators.length ? el('div', { class: 'label', style: 'margin-top:10px', text: t('room.spectators') }) : null, rm.spectators.length ? specs : null]),
+        el('div', { class: 'panel' }, [settings]), el('div', { class: 'panel' }, [invite]), actions, el('div', { style: 'height:70px' })
+      ]);
+      mountChat('room');
+    }
+
+    /* 對局 */
+    function kindLabel(k) { return t('m.k.' + k); }
+    function numHelp(params) {
+      return t('m.num.' + params.mode, { f: params.factor ? Math.round(params.factor * 100) / 100 : '', max: params.max });
+    }
+    function canAct() {
+      if (!S.room || !S.match) return false;
+      const mine = S.room.players.some(function (p) { return p.pid === pid; });
+      const me2 = S.match.players && S.match.players[pid];
+      return mine && me2 && me2.alive && !S.match.finished;
+    }
+    function renderMatch() {
+      const rm = S.room; if (!rm || !S.match) return;
+      ctx.setTitle(rm.name, '#' + rm.id);
+      M = { board: el('div', { class: 'board' }), chips: el('div', { class: 'hud' }), status: el('div', { class: 'muted center', style: 'min-height:1.4em' }), content: el('div', { class: 'stack' }) };
+      const left = el('div', { class: 'panel' }, [el('h3', { text: t('m.score') + ' ・ ' + (S.match.format === 'chips' ? t('m.chips') : '') }), M.board]);
+      const right = el('div', { class: 'stack' }, [M.chips, M.status, M.content]);
+      const main = el('div', { class: 'match', style: 'padding-bottom:80px' }, [left, right]);
+      ctx.screen.appendChild(el('div', { class: 'pad', style: 'flex:1;min-height:0;display:flex' }, [UI.scrollArea(main, { label: rm.name })]));
+      mountChat('room');
+      tick = setInterval(onTick, 250);
+      drawBoard();
+    }
+    function resumeMatchUI() {
+      const m = S.match; if (!m) return;
+      if (m.cur) buildRoundUI(); else if (m.last) showReveal(m.last);
+      if (m.finished && m.last && !finalDlg) setTimeout(function () { onMatchEnd({ winners: m.winners, players: m.players, format: m.format }, true); }, 0);
+    }
+    function drawBoard() {
+      if (!M || !S.match || !S.match.players) return;
+      const order = Object.keys(S.match.players).sort(function (a, b) {
+        const A = S.match.players[a], B = S.match.players[b];
+        if (A.alive !== B.alive) return A.alive ? -1 : 1;
+        const ka = S.match.format === 'chips' ? A.chips : A.score, kb = S.match.format === 'chips' ? B.chips : B.score;
+        return kb - ka || B.score - A.score;
+      });
+      M.board.textContent = '';
+      order.forEach(function (id) {
+        const p = S.match.players[id];
+        const done = S.match.cur && S.done.indexOf(id) !== -1;
+        const row = el('div', { class: 'p' + (id === pid ? ' me' : '') + (p.alive ? '' : ' out') + (done ? ' done' : '') }, [
+          el('span', { class: 'nm', text: nameOf(id) }),
+          el('span', { class: 'sc', text: S.match.format === 'chips' ? p.chips + '⛁ ' + p.score : String(p.score) }),
+          !p.alive ? el('span', { class: 'badge', text: t('m.out') }) : null
+        ]);
+        M.board.appendChild(row);
+      });
+      M.chips.textContent = '';
+      const r = S.match.cur ? S.match.cur.index : S.match.round;
+      M.chips.appendChild(el('div', { class: 'chip' }, [el('b', { text: r + '/' + S.match.rounds }), el('span', { text: t('m.round', { a: '', b: '' }).replace(/[\d/\s]+/g, ' ').trim() || 'ROUND' })]));
+      if (S.match.cur) M.chips.appendChild(el('div', { class: 'chip' }, [el('b', { text: kindLabel(S.match.cur.kind) }), el('span', { text: '' })]));
+      M.chips.appendChild(el('div', { class: 'chip', id: 'tmchip' }, [el('b', { class: 'tm', text: '—' }), el('span', { text: t('play.time') })]));
+      drawRoundStatus();
+    }
+    function drawRoundStatus() {
+      if (!M) return;
+      let txt = '';
+      const mine = S.room && S.room.players.some(function (p) { return p.pid === pid; });
+      if (!mine) txt = t('m.spectating');
+      else if (S.match && S.match.players[pid] && !S.match.players[pid].alive && !S.match.finished) txt = t('m.eliminated');
+      else if (S.match && S.match.cur && (S.picked || S.solved)) txt = S.solved ? t('m.solved') : t('m.picked');
+      M.status.textContent = txt;
+    }
+    function onTick() {
+      const m = S.match; if (!m || !M) return;
+      const tmEl = M.chips.querySelector('.tm'); if (!tmEl) return;
+      const nowS = Date.now() + S.offset;
+      if (m.cur) {
+        const rem = Math.max(0, Math.ceil((m.cur.deadline - nowS) / 1000));
+        tmEl.textContent = rem + 's'; tmEl.parentNode.classList.toggle('warn', rem <= 5);
+        if (rem <= 5 && rem !== M.lastBeep && rem > 0) { M.lastBeep = rem; Audio2.sfx('tick'); }
+      } else if (m.last && m.last.nextAt && !m.finished) {
+        tmEl.textContent = Math.max(0, Math.ceil((m.last.nextAt - nowS) / 1000)) + 's';
+        tmEl.parentNode.classList.remove('warn');
+      } else tmEl.textContent = '—';
+    }
+
+    function onRound(m) {
+      S.match = S.match || { players: {} };
+      S.match.cur = m.cur; S.match.last = null; S.match.round = m.cur.index - 1; S.match.rounds = m.cur.total;
+      offsetFrom(m.cur.now); S.picked = false; S.solved = false; S.done = [];
+      if (S.view === 'match' && M) buildRoundUI();
+    }
+    function buildRoundUI() {
+      if (!M || !S.match || !S.match.cur) return;
+      if (widget) { widget.destroy(); widget = null; }
+      const cur = S.match.cur;
+      M.content.textContent = '';
+      drawBoard();
+      const act = canAct() && !(S.picked || S.solved);
+      M.content.appendChild(el('div', { class: 'panel' }, [el('h3', { text: kindLabel(cur.kind) }), cur.kind === 'num' ? el('p', { style: 'margin:0', text: numHelp(cur.params) }) : null]));
+      if (cur.kind === 'num') {
+        const p = cur.params; let val = Math.round((p.min + p.max) / 2);
+        const panel = el('div', { class: 'panel stack' });
+        if (p.mode === 'avg') {
+          const big = el('div', { class: 'bigpick', text: String(val) });
+          const sl = UI.slider((val - p.min) / (p.max - p.min), function (v) { val = Math.round(p.min + v * (p.max - p.min)); big.textContent = String(val); }, t('m.pick'));
+          sl.style.width = '100%';
+          const adj = function (d) { val = Math.min(p.max, Math.max(p.min, val + d)); big.textContent = String(val); sl.set((val - p.min) / (p.max - p.min)); };
+          panel.appendChild(big); panel.appendChild(sl);
+          panel.appendChild(el('div', { class: 'row', style: 'justify-content:center' }, [-10, -1, 1, 10].map(function (d) { return UI.button((d > 0 ? '+' : '−') + Math.abs(d), { cls: 'small', onClick: function () { adj(d); } }); })));
+        } else {
+          const grid = el('div', { class: 'pick-grid' });
+          for (let n = p.min; n <= p.max; n++) (function (n) { grid.appendChild(UI.button(String(n), { onClick: function () { val = n; Array.prototype.forEach.call(grid.children, function (b) { b.classList.remove('is-on'); }); this.classList.add('is-on'); }.bind(null) })); })(n);
+          val = null;
+          Array.prototype.forEach.call(grid.children, function (b, i) { b.addEventListener('click', function () { val = p.min + i; Array.prototype.forEach.call(grid.children, function (x) { x.classList.remove('is-on'); }); b.classList.add('is-on'); }); });
+          panel.appendChild(grid);
+        }
+        panel.appendChild(UI.button(t('m.pick'), { cls: 'primary big block', disabled: !act, onClick: function () { if (val == null) { UI.toast(t('err.bad_pick'), true); return; } send({ t: 'm:pick', v: val }); } }));
+        if (S.role === 'spec') panel.style.display = 'none';
+        M.content.appendChild(panel);
+      } else {
+        const puzzle = cur.puzzle;
+        const o = { onSubmit: function (ans) { if (canAct() && !S.solved) send({ t: 'm:solve', answer: ans }); } };
+        widget = puzzle.type === 'deduce' ? Puzzle.mountDeduce(puzzle, o) : Puzzle.mountArith(puzzle, o);
+        const grid = el('div', { class: 'play' }, [el('div', { class: 'panel' }, [widget.cluesEl]), el('div', { class: 'panel' }, [widget.entryEl])]);
+        if (!act) grid.style.opacity = '.55';
+        M.content.appendChild(grid);
+      }
+      Audio2.sfx('reveal');
+      drawRoundStatus();
+    }
+    function onRoundEnd(re) {
+      S.match = S.match || {};
+      S.match.last = re; S.match.cur = null; S.match.players = re.players; S.match.round = re.index; offsetFrom(re.now);
+      if (widget) { widget.destroy(); widget = null; }
+      if (S.view === 'match' && M) showReveal(re);
+    }
+    function showReveal(re) {
+      if (!M) return;
+      M.content.textContent = '';
+      drawBoard();
+      const rows = Object.keys(re.points).sort(function (a, b) { return re.ranks[a] - re.ranks[b]; });
+      const tbl = el('table', { class: 'rtable' }, [el('tr', null, [el('th', { text: '#' }), el('th', { text: '' }), el('th', { text: re.kind === 'num' ? t('m.revealed') : t('play.time') }), el('th', { text: t('m.score') })])]);
+      rows.forEach(function (id) {
+        const v = re.kind === 'num' ? (re.picks[id] == null ? t('m.noPick') : String(re.picks[id])) : (re.times[id] == null ? t('m.noPick') : UI.fmtSec(re.times[id]) + 's');
+        tbl.appendChild(el('tr', { class: re.winners.indexOf(id) !== -1 ? 'win' : '' }, [el('td', { text: String(re.ranks[id]) }), el('td', { text: nameOf(id) + (id === pid ? '（' + t('room.you') + '）' : '') }), el('td', { class: 'mono', text: v }), el('td', { class: 'mono', text: t('m.pts', { n: re.points[id] }) })]));
+      });
+      const box = el('div', { class: 'panel stack' }, [el('h3', { text: t('m.roundEnd') + ' ・ ' + kindLabel(re.kind) }), tbl]);
+      if (re.kind === 'num') box.appendChild(el('div', { class: 'sol' }, [el('h4', { text: t('res.solution') }), el('div', { text: R.explainNumGame(re.params, { info: re.info }, I18N.lang) })]));
+      if (re.eliminated && re.eliminated.length) box.appendChild(el('div', { class: 'badge', style: 'border-color:var(--red);color:var(--red);width:fit-content', text: t('m.out') + '：' + re.eliminated.map(nameOf).join('、') }));
+      M.content.appendChild(box);
+      if (re.kind !== 'num' && re.puzzle) M.content.appendChild(Puzzle.solutionView(re.puzzle, kindLabel(re.kind)));
+      Audio2.sfx(re.winners.indexOf(pid) !== -1 ? 'win' : 'reveal');
+    }
+    function onMatchEnd(m, silent) {
+      S.match = S.match || {}; S.match.finished = true; S.match.winners = m.winners; S.match.players = m.players;
+      if (S.view !== 'match' || finalDlg) return;
+      drawBoard();
+      const order = Object.keys(m.players).sort(function (a, b) {
+        const A = m.players[a], B = m.players[b], ka = m.format === 'chips' ? A.chips : A.score, kb = m.format === 'chips' ? B.chips : B.score;
+        return (B.alive - A.alive) || (kb - ka) || (B.score - A.score);
+      });
+      const tbl = el('table', { class: 'rtable' }, [el('tr', null, [el('th', { text: '#' }), el('th', { text: '' }), el('th', { text: t('m.score') }), el('th', { text: m.format === 'chips' ? t('m.chips') : '' })])]);
+      order.forEach(function (id, i) {
+        const win = m.winners.indexOf(id) !== -1;
+        tbl.appendChild(el('tr', { class: win ? 'win' : '' }, [el('td', { text: String(i + 1) }), el('td', { text: nameOf(id) + (win ? ' ★' : '') }), el('td', { class: 'mono', text: String(m.players[id].score) }), el('td', { class: 'mono', text: m.format === 'chips' ? String(m.players[id].chips) : '' })]));
+      });
+      const iWon = m.winners.indexOf(pid) !== -1;
+      const host = isHost();
+      if (!silent) Audio2.sfx(iWon ? 'win' : 'lose');
+      const dlg = UI.modal({
+        title: t('m.final'), closable: false,
+        body: [el('h3', { class: 'result-title ' + (iWon ? 'win' : ''), text: t('m.champion') + '：' + m.winners.map(nameOf).join('、') }), tbl],
+        footer: [
+          UI.button(host ? t('common.again') : t('m.waitHost'), { cls: 'primary', disabled: !host, onClick: function () { send({ t: 'm:again' }); } }),
+          UI.button(t('common.room'), { cls: 'ghost', onClick: function () {
+            if (host) send({ t: 'm:toRoom' });
+            else { dlg.close(); finalDlg = null; S.leftMatch = true; S.view = 'room'; render(); }
+          } }),
+          UI.button(t('common.home'), { cls: 'ghost', onClick: function () { dlg.close(); finalDlg = null; leaveToHome(); } })
+        ]
+      });
+      finalDlg = dlg;
+    }
+
+    connect();
   };
 })();

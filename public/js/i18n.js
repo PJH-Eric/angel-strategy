@@ -55,6 +55,11 @@
       'chat.title': '大廳', 'chat.title.n': '大廳 {n} 人', 'chat.ph': '說點什麼…', 'chat.send': '送出', 'chat.quick': '快捷', 'chat.new': '↓ {n} 則新訊息', 'chat.connecting': '連線中…', 'chat.me': '（我）',
       'chat.q1': '嗨～', 'chat.q2': '來一局！', 'chat.q3': '缺一人！', 'chat.q4': '快進房～', 'chat.q5': '等我一下', 'chat.q6': '謝謝', 'chat.q7': '拜拜',
       'chat.sys.room': '{n} 開了新房間（{r}）', 'chat.rename': '改暱稱', 'room.chat': '房間聊天',
+      'm.waitHost': '等待房主操作…', 'room.waitStart': '等房主開始對局', 'room.name': '房間名稱（可留空）', 'room.create': '建立房間',
+      'err.room_full': '房間已滿', 'err.not_host': '只有房主可以操作', 'err.started': '對局已開始', 'err.room_closed': '房間已關閉或不存在',
+      'err.invite_invalid': '邀請連結無效、已過期或已撤銷', 'err.need_two': '至少需要 2 位真人才能開始', 'err.last_player': '你是最後一位玩家，無法改為觀戰',
+      'err.spec_full': '觀戰席已滿', 'err.already_in_room': '你已經在房間裡', 'err.bad_pick': '請先選擇範圍內的數字', 'err.too_many_rooms': '伺服器房間數已滿，請稍後再試',
+      'err.chat_dup': '請勿重複送出相同內容', 'err.chat_rate': '送出太快了',
       'err.generic': '發生錯誤，請稍後再試', 'err.roomFull': '房間已滿', 'err.notHost': '只有房主可以操作', 'err.started': '對局已開始', 'err.closed': '房間已關閉'
     },
     'en': {
@@ -110,6 +115,11 @@
       'chat.title': 'Lobby', 'chat.title.n': 'Lobby · {n}', 'chat.ph': 'Say something…', 'chat.send': 'Send', 'chat.quick': 'Quick', 'chat.new': '↓ {n} new', 'chat.connecting': 'Connecting…', 'chat.me': ' (me)',
       'chat.q1': 'Hi!', 'chat.q2': "Let's play!", 'chat.q3': 'Need one more!', 'chat.q4': 'Join the room!', 'chat.q5': 'One sec', 'chat.q6': 'Thanks', 'chat.q7': 'Bye',
       'chat.sys.room': '{n} opened a room ({r})', 'chat.rename': 'Rename', 'room.chat': 'Room chat',
+      'm.waitHost': 'Waiting for host…', 'room.waitStart': 'Waiting for the host to start', 'room.name': 'Room name (optional)', 'room.create': 'Create Room',
+      'err.room_full': 'Room is full', 'err.not_host': 'Host only', 'err.started': 'Match already started', 'err.room_closed': 'Room closed or not found',
+      'err.invite_invalid': 'This invite is invalid, expired or revoked', 'err.need_two': 'At least 2 real players are needed', 'err.last_player': 'You are the last player and cannot spectate',
+      'err.spec_full': 'Spectator seats are full', 'err.already_in_room': 'You are already in a room', 'err.bad_pick': 'Pick a number in range first', 'err.too_many_rooms': 'Server is full, try again later',
+      'err.chat_dup': 'Please do not repeat yourself', 'err.chat_rate': 'Sending too fast',
       'err.generic': 'Something went wrong, please try again', 'err.roomFull': 'Room is full', 'err.notHost': 'Host only', 'err.started': 'Match already started', 'err.closed': 'Room closed'
     }
   };

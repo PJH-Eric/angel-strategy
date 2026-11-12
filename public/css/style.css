@@ -205,3 +205,54 @@ body { touch-action: manipulation; }
   .target { font-size: clamp(26px, 8vh, 40px); }
   .expr { min-height: 48px; }
 }
+
+/* ---------- 線上：大廳、房間、對局 ---------- */
+.room-list { display: grid; gap: 10px; padding: 2px 2px 90px; }
+.room-card { display: flex; align-items: center; gap: 10px; background: var(--steel); border-left: 3px solid var(--amber); padding: 10px 12px; flex-wrap: wrap; }
+.room-card .grow b { display: block; }
+.player-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--steel); border-left: 3px solid var(--cyan); margin-bottom: 8px; }
+.player-row.off { opacity: .5; }
+.player-row .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-box { font: .85em var(--mono); word-break: break-all; background: #0b1014; border: 1px dashed var(--line); padding: 8px 10px; color: var(--cyan); }
+.stepper { display: inline-flex; align-items: center; gap: 8px; }
+.stepper b { min-width: 2.2em; text-align: center; font: 700 1.2em var(--mono); }
+.match { display: grid; gap: var(--gutter); grid-template-columns: 1fr; align-content: start; }
+@media (min-width: 900px) { .match { grid-template-columns: 250px 1fr; } }
+.board { display: grid; gap: 6px; }
+.board .p { display: flex; align-items: center; gap: 8px; background: var(--steel); padding: 6px 10px; border-left: 3px solid var(--cyan); }
+.board .p.me { border-left-color: var(--amber); }
+.board .p.out { opacity: .45; text-decoration: line-through; }
+.board .p .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board .p .sc { font: 700 1.05em var(--mono); color: var(--amber); }
+.board .p.done::after { content: "✓"; color: var(--green); }
+.bigpick { font: 800 clamp(48px, 12vw, 84px) var(--mono); text-align: center; color: var(--amber); line-height: 1.1; }
+.pick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+.pick-grid .btn { min-height: 56px; font: 700 1.3em var(--mono); }
+.pick-grid .btn.is-on { --c: #8a5f0c; --bd: var(--amber); }
+.rtable { width: 100%; border-collapse: collapse; }
+.rtable td, .rtable th { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,.07); text-align: left; }
+.rtable th { color: var(--dim); font-weight: 600; font-size: .8em; letter-spacing: .1em; }
+.rtable .win td { color: var(--green); font-weight: 700; }
+
+/* ---------- 聊天室：左下浮動氣泡／面板 ---------- */
+.lc-bubble { position: absolute; left: calc(12px + var(--safe-l)); bottom: calc(12px + var(--safe-b)); z-index: 600; display: flex; align-items: flex-end; gap: 8px; }
+.lc-bubble .btn { width: 52px; height: 52px; padding: 0; font-size: 1.35em; }
+.lc-bubble.bounce .btn { animation: bounce .6s 2; }
+.reduce-motion .lc-bubble.bounce .btn { animation: none; }
+@keyframes bounce { 40% { transform: translateY(-8px); } }
+.lc-preview { max-width: min(60vw, 280px); background: #0b1014; border: 1px solid var(--amber); padding: 6px 10px; font-size: .88em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lc-panel { position: absolute; left: calc(12px + var(--safe-l)); bottom: calc(12px + var(--safe-b)); width: 300px; height: clamp(280px, 50%, 480px); z-index: 600; display: flex; flex-direction: column; background: #0d1318; border: 1px solid var(--amber); }
+.lc-panel > header { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-bottom: 1px solid var(--line); background: linear-gradient(90deg, rgba(242,168,29,.16), transparent); }
+.lc-panel > header b { flex: 1; font-size: .9em; letter-spacing: .08em; }
+.lc-body { flex: 1; min-height: 0; display: flex; padding: 6px 2px 4px 8px; position: relative; }
+.lc-msgs { display: grid; gap: 6px; align-content: start; width: 100%; }
+.lc-msg { font-size: .88em; word-break: break-word; }
+.lc-msg .who { color: var(--cyan); font-weight: 700; } .lc-msg.me .who { color: var(--amber); } .lc-msg time { color: var(--dim); font-size: .8em; margin-left: .4em; }
+.lc-msg.sys { background: var(--steel); border-left: 3px solid var(--amber); padding: 6px 8px; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.lc-new { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); z-index: 2; }
+.lc-input { flex: none; display: flex; gap: 6px; padding: 6px; border-top: 1px solid var(--line); }
+.lc-input .field { flex: 1; min-width: 0; } .lc-input input { padding: 6px 8px; min-height: 38px; }
+.lc-input .btn { min-width: 38px; min-height: 38px; padding: 0 10px; }
+@media (max-width: 700px), (max-height: 520px) {
+  .lc-panel { left: 0; right: 0; bottom: 0; top: 0; width: auto; height: auto; z-index: 700; padding-top: var(--safe-t); }
+}
