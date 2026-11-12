@@ -53,7 +53,7 @@
       UI.menu(quickBtn, QUICK.map(function (k) { return { id: k, label: t(k) }; }), function (k) { if (!disabledText) o.onSend(t(k)); });
     } });
     const title = el('b');
-    const closeBtn = UI.button('✕', { cls: 'small ghost icon', aria: t('common.close'), onClick: function () { setOpen(false); } });
+    const closeBtn = UI.button('', { cls: 'small ghost icon', icon: 'close', aria: t('common.close'), onClick: function () { setOpen(false); } });
     const head = el('header', null, [title, o.onRename ? UI.button('✎', { cls: 'small ghost icon', aria: t('chat.rename'), onClick: o.onRename }) : null, closeBtn]);
     const panel = el('div', { class: 'lc-panel', role: 'dialog', 'aria-label': t('chat.title') }, [
       head, el('div', { class: 'lc-body' }, [sa, newBtn]),
@@ -84,7 +84,7 @@
         wrap.appendChild(panel); drawTitle(); redraw();
         setTimeout(function () { sa.sync(); sa.view.scrollTop = sa.view.scrollHeight; }, 0);
       } else {
-        bubbleEl = el('div', { class: 'lc-bubble' }, [UI.button('💬', { cls: 'icon', aria: t('chat.title'), onClick: function () { setOpen(true); } })]);
+        bubbleEl = el('div', { class: 'lc-bubble' }, [UI.button('', { cls: 'icon', icon: 'chat', aria: t('chat.title'), onClick: function () { setOpen(true); } })]);
         wrap.appendChild(bubbleEl);
       }
     }
@@ -298,7 +298,7 @@
       const top = el('div', { class: 'row' }, [
         el('div', { class: 'grow' }, [el('div', { class: 'label', text: t('on.name') }), nameBtn]),
         UI.button(t('on.quick'), { cls: '', onClick: quickJoin }),
-        UI.button(t('on.create'), { cls: 'primary', onClick: createModal })
+        UI.button(t('on.create'), { cls: 'primary', icon: 'plus', onClick: createModal })
       ]);
       ctx.screen.appendChild(el('div', { class: 'stack pad', style: 'flex:1;min-height:0' }, [top, el('div', { class: 'label', text: t('on.rooms') }), UI.scrollArea(roomsHost, { label: t('on.rooms') })]));
       drawRooms();
@@ -368,7 +368,7 @@
       rm.players.forEach(function (p) {
         const row = el('div', { class: 'player-row' + (p.connected ? '' : ' off') }, [
           el('span', { class: 'nm', text: p.name + (p.pid === pid ? '（' + t('room.you') + '）' : '') }),
-          p.pid === rm.hostPid ? el('span', { class: 'badge', text: t('room.host') }) : null,
+          p.pid === rm.hostPid ? el('span', { class: 'badge host' }, [Icon.el('crown'), el('span', { text: t('room.host') })]) : null,
           !p.connected ? el('span', { class: 'badge', style: 'border-color:var(--red);color:var(--red)', text: t('m.discon') }) : null
         ]);
         if (host && p.pid !== pid) row.appendChild(UI.button(t('room.kick'), { cls: 'small ghost danger', onClick: function () { send({ t: 'room:kick', pid: p.pid }); } }));
@@ -402,7 +402,7 @@
       const invite = el('div', { class: 'stack' }, [
         el('div', { class: 'label', text: t('room.invite') }),
         el('div', { class: 'link-box', text: playUrl }),
-        el('div', { class: 'row' }, [UI.button(t('common.copy') + ' ' + t('on.join'), { cls: 'small', onClick: function () { copy(playUrl); } }), UI.button(t('common.copy') + ' ' + t('on.watch'), { cls: 'small ghost', onClick: function () { copy(specUrl); } }), host ? UI.button(t('room.revoke'), { cls: 'small ghost danger', onClick: function () { send({ t: 'room:revoke' }); } }) : null])
+        el('div', { class: 'row' }, [UI.button(t('common.copy') + ' ' + t('on.join'), { cls: 'small', icon: 'link', onClick: function () { copy(playUrl); } }), UI.button(t('common.copy') + ' ' + t('on.watch'), { cls: 'small ghost', icon: 'eye', onClick: function () { copy(specUrl); } }), host ? UI.button(t('room.revoke'), { cls: 'small ghost danger', onClick: function () { send({ t: 'room:revoke' }); } }) : null])
       ]);
       const mine = rm.players.some(function (p) { return p.pid === pid; });
       const actions = el('div', { class: 'row' });
@@ -471,9 +471,9 @@
       });
       M.chips.textContent = '';
       const r = S.match.cur ? S.match.cur.index : S.match.round;
-      M.chips.appendChild(el('div', { class: 'chip' }, [el('b', { text: r + '/' + S.match.rounds }), el('span', { text: t('m.round', { a: '', b: '' }).replace(/[\d/\s]+/g, ' ').trim() || 'ROUND' })]));
-      if (S.match.cur) M.chips.appendChild(el('div', { class: 'chip' }, [el('b', { text: kindLabel(S.match.cur.kind) }), el('span', { text: '' })]));
-      M.chips.appendChild(el('div', { class: 'chip', id: 'tmchip' }, [el('b', { class: 'tm', text: '—' }), el('span', { text: t('play.time') })]));
+      M.chips.appendChild(el('div', { class: 'chip' }, [Icon.el('flag', 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { text: r + '/' + S.match.rounds }), el('span', { text: t('m.round', { a: '', b: '' }).replace(/[\d/\s]+/g, ' ').trim() || 'ROUND' })])]));
+      if (S.match.cur) M.chips.appendChild(el('div', { class: 'chip kind' }, [Icon.el(Icon.kind(S.match.cur.kind), 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { text: kindLabel(S.match.cur.kind) }), el('span', { text: t('m.thisRound') })])]));
+      M.chips.appendChild(el('div', { class: 'chip', id: 'tmchip' }, [Icon.el('clock', 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { class: 'tm', text: '—' }), el('span', { text: t('play.time') })])]));
       drawRoundStatus();
     }
     function drawRoundStatus() {
@@ -491,11 +491,11 @@
       const nowS = Date.now() + S.offset;
       if (m.cur) {
         const rem = Math.max(0, Math.ceil((m.cur.deadline - nowS) / 1000));
-        tmEl.textContent = rem + 's'; tmEl.parentNode.classList.toggle('warn', rem <= 5);
+        tmEl.textContent = rem + 's'; tmEl.closest('.chip').classList.toggle('warn', rem <= 5);
         if (rem <= 5 && rem !== M.lastBeep && rem > 0) { M.lastBeep = rem; Audio2.sfx('tick'); }
       } else if (m.last && m.last.nextAt && !m.finished) {
         tmEl.textContent = Math.max(0, Math.ceil((m.last.nextAt - nowS) / 1000)) + 's';
-        tmEl.parentNode.classList.remove('warn');
+        tmEl.closest('.chip').classList.remove('warn');
       } else tmEl.textContent = '—';
     }
 
@@ -512,7 +512,7 @@
       M.content.textContent = '';
       drawBoard();
       const act = canAct() && !(S.picked || S.solved);
-      M.content.appendChild(el('div', { class: 'panel' }, [el('h3', { text: kindLabel(cur.kind) }), cur.kind === 'num' ? el('p', { style: 'margin:0', text: numHelp(cur.params) }) : (isPick(cur.kind) ? el('p', { style: 'margin:0', text: t('m.help.' + cur.kind, { prize: cur.params && cur.params.prize }) }) : null)]));
+      M.content.appendChild(el('div', { class: 'panel' }, [el('h3', { class: 'kind-h' }, [Icon.el(Icon.kind(cur.kind)), el('span', { text: kindLabel(cur.kind) })]), cur.kind === 'num' ? el('p', { style: 'margin:0', text: numHelp(cur.params) }) : (isPick(cur.kind) ? el('p', { style: 'margin:0', text: t('m.help.' + cur.kind, { prize: cur.params && cur.params.prize }) }) : null)]));
       if (cur.kind === 'num') {
         const p = cur.params; let val = Math.round((p.min + p.max) / 2);
         const panel = el('div', { class: 'panel stack' });
@@ -648,7 +648,7 @@
         const v = isPick(re.kind) ? pickText(re, id) : (re.times[id] == null ? t('m.noPick') : UI.fmtSec(re.times[id]) + 's');
         tbl.appendChild(el('tr', { class: re.winners.indexOf(id) !== -1 ? 'win' : '' }, [el('td', { text: String(re.ranks[id]) }), el('td', { text: nameOf(id) + (id === pid ? '（' + t('room.you') + '）' : '') }), el('td', { class: 'mono', text: v }), el('td', { class: 'mono', text: t('m.pts', { n: re.points[id] }) })]));
       });
-      const box = el('div', { class: 'panel stack' }, [el('h3', { text: t('m.roundEnd') + ' ・ ' + kindLabel(re.kind) }), tbl]);
+      const box = el('div', { class: 'panel stack' }, [el('h3', { class: 'kind-h' }, [Icon.el(Icon.kind(re.kind)), el('span', { text: t('m.roundEnd') + ' ・ ' + kindLabel(re.kind) })]), tbl]);
       if (re.kind === 'num') box.appendChild(el('div', { class: 'sol' }, [el('h4', { text: t('res.solution') }), el('div', { text: R.explainNumGame(re.params, { info: re.info }, I18N.lang) })]));
       if (re.kind === 'auction' || re.kind === 'hilo' || re.kind === 'remove') box.appendChild(sealedExplain(re));
       if (re.eliminated && re.eliminated.length) box.appendChild(el('div', { class: 'badge', style: 'border-color:var(--red);color:var(--red);width:fit-content', text: t('m.out') + '：' + re.eliminated.map(nameOf).join('、') }));
@@ -676,12 +676,12 @@
         title: t('m.final'), closable: false,
         body: [el('h3', { class: 'result-title ' + (iWon ? 'win' : ''), text: t('m.champion') + '：' + m.winners.map(nameOf).join('、') }), tbl],
         footer: [
-          UI.button(host ? t('common.again') : t('m.waitHost'), { cls: 'primary', disabled: !host, onClick: function () { send({ t: 'm:again' }); } }),
-          UI.button(t('common.room'), { cls: 'ghost', onClick: function () {
+          UI.button(host ? t('common.again') : t('m.waitHost'), { cls: 'primary', icon: 'retry', disabled: !host, onClick: function () { send({ t: 'm:again' }); } }),
+          UI.button(t('common.room'), { cls: 'ghost', icon: 'room', onClick: function () {
             if (host) send({ t: 'm:toRoom' });
             else { dlg.close(); finalDlg = null; S.leftMatch = true; S.view = 'room'; render(); }
           } }),
-          UI.button(t('common.home'), { cls: 'ghost', onClick: function () { dlg.close(); finalDlg = null; leaveToHome(); } })
+          UI.button(t('common.home'), { cls: 'ghost', icon: 'home', onClick: function () { dlg.close(); finalDlg = null; leaveToHome(); } })
         ]
       });
       finalDlg = dlg;

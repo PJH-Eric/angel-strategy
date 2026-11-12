@@ -25,6 +25,7 @@
     opts = opts || {};
     const b = el('button', { type: 'button', class: 'btn ' + (opts.cls || ''), 'aria-label': opts.aria || null, title: opts.title || null });
     if (opts.html) b.innerHTML = opts.html; else b.textContent = label;
+    if (opts.icon && window.Icon) { b.insertBefore(Icon.el(opts.icon), b.firstChild); if (!label && !opts.html) b.classList.add('only-ic'); }
     b.addEventListener('click', function (e) {
       if (b.disabled || b.classList.contains('is-disabled')) return;
       Audio2.sfx('click');
@@ -157,7 +158,7 @@
     const dlg = el('div', { class: 'dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': opts.title || null }, [head, el('div', { class: 'body' }, [sa])]);
     const ov = el('div', { class: 'overlay ' + (opts.top ? 'top' : '') }, [dlg]);
     function close() { ov.remove(); document.removeEventListener('keydown', onKey, true); if (prev && prev.focus) { try { prev.focus(); } catch (e) { /* ignore */ } } if (opts.onClose) opts.onClose(); }
-    if (opts.closable !== false) head.appendChild(button('✕', { cls: 'small icon ghost', aria: t('common.close'), onClick: close }));
+    if (opts.closable !== false) head.appendChild(button('', { cls: 'small icon ghost', icon: 'close', aria: t('common.close'), onClick: close }));
     if (opts.footer && opts.footer.length) { const f = el('footer', null, opts.footer); dlg.appendChild(f); }
     function onKey(e) {
       if (e.key === 'Escape' && opts.closable !== false) { e.stopPropagation(); close(); return; }

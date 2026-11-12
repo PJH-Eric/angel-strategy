@@ -432,7 +432,7 @@
   }
   function dailyTimeLimitSec(diff) {
     const base = TIME_BASE[diff];
-    return base == null ? null : base * 3;
+    return base == null ? null : base * 4;   // 每日四題
   }
 
   /* ---------- 多人：數字博弈 ---------- */

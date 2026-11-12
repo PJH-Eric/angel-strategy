@@ -27,7 +27,7 @@
     const pad = el('div', { class: 'pad-grid' });
     for (let d = 0; d < puzzle.pool; d++) pad.appendChild(UI.button(String(d), { onClick: function () { put(d); } }));
     const act = el('div', { class: 'row', style: 'justify-content:center' }, [
-      UI.button(t('play.back'), { cls: 'ghost', onClick: back }),
+      UI.button('', { cls: 'ghost', icon: 'backspace', aria: t('play.back'), onClick: back }),
       UI.button(t('play.clear'), { cls: 'ghost', onClick: clear }),
       UI.button(t('play.submit'), { cls: 'primary', onClick: submit })
     ]);
@@ -112,7 +112,7 @@
     [['+', '+'], ['−', '-'], ['×', '*'], ['÷', '/'], ['(', '('], [')', ')']].forEach(function (o) {
       opsEl.appendChild(UI.button(o[0], { cls: 'ghost', onClick: function () { commit(); st.tokens.push({ s: o[0] }); Audio2.sfx('key'); draw(); } }));
     });
-    opsEl.appendChild(UI.button('⌫', { cls: 'ghost', aria: t('play.back'), onClick: function () { commit(); back(); } }));
+    opsEl.appendChild(UI.button('', { cls: 'ghost', icon: 'backspace', aria: t('play.back'), onClick: function () { commit(); back(); } }));
     const act = el('div', { class: 'row', style: 'justify-content:center' }, [
       UI.button(t('play.clear'), { cls: 'ghost', onClick: function () { buf = ''; st.tokens = []; st.used = []; draw(); } }),
       UI.button(t('play.submit'), { cls: 'primary', onClick: function () { commit(); submit(); } })
@@ -173,7 +173,7 @@
   /* ---------- 共用：數字鍵盤小元件 ---------- */
   function padOf(labels, onKey, cols) {
     const g = el('div', { class: 'pad-grid', style: cols ? 'grid-template-columns:repeat(' + cols + ',1fr)' : '' });
-    labels.forEach(function (l) { g.appendChild(UI.button(l.t, { cls: l.cls || '', onClick: function () { onKey(l.k); } })); });
+    labels.forEach(function (l) { g.appendChild(UI.button(l.t, { cls: l.cls || '', icon: l.icon, aria: l.icon ? t('play.back') : null, onClick: function () { onKey(l.k); } })); });
     return g;
   }
 
@@ -191,7 +191,7 @@
       return { row: row, val: val };
     });
     const list = el('div', { class: 'stack' }, rows.map(function (r) { return r.row; }));
-    const pad = padOf([1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(function (d) { return { t: String(d), k: String(d) }; }).concat([{ t: '−', k: '-', cls: 'ghost' }, { t: '⌫', k: 'b', cls: 'ghost' }]), key, 6);
+    const pad = padOf([1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map(function (d) { return { t: String(d), k: String(d) }; }).concat([{ t: '−', k: '-', cls: 'ghost' }, { t: '', k: 'b', cls: 'ghost', icon: 'backspace' }]), key, 6);
     const act = el('div', { class: 'row', style: 'justify-content:center' }, [UI.button(t('play.clear'), { cls: 'ghost', onClick: function () { st.vals = st.vals.map(function () { return ''; }); st.cur = 0; draw(); } }), UI.button(t('play.submit'), { cls: 'primary', onClick: submit })]);
     const entryEl = el('div', { class: 'stack' }, [el('div', { class: 'label', text: t('play.predict') }), list, pad, act]);
     function key(k) {
@@ -242,7 +242,7 @@
     const bagBtns = puzzle.bag.map(function (w) { return UI.button(String(w), { cls: 'num', onClick: function () { put(w); } }); });
     const pad = el('div', { class: 'pad-grid' }, bagBtns);
     const act = el('div', { class: 'row', style: 'justify-content:center' }, [
-      UI.button(t('play.back'), { cls: 'ghost', onClick: function () { st.assign[st.cur] = null; draw(); } }),
+      UI.button('', { cls: 'ghost', icon: 'backspace', aria: t('play.back'), onClick: function () { st.assign[st.cur] = null; draw(); } }),
       UI.button(t('play.clear'), { cls: 'ghost', onClick: function () { st.assign = new Array(puzzle.m).fill(null); st.cur = 0; draw(); } }),
       UI.button(t('play.submit'), { cls: 'primary', onClick: submit })
     ]);
@@ -326,7 +326,7 @@
   /* ---------- 解法 ---------- */
   function solutionView(puzzle, label) {
     const box = el('div', { class: 'sol' });
-    box.appendChild(el('h4', { text: (label ? label + '　' : '') + t('res.solution') }));
+    box.appendChild(el('h4', { class: 'sol-h' }, [Icon.el(Icon.kind(puzzle.type)), el('span', { text: (label ? label + '　' : t('kind.' + puzzle.type) + '　') + t('res.solution') })]));
     box.appendChild(el('div', { class: 'fig-wrap' }, [Figure.solution(puzzle, I18N.lang)]));
     if (puzzle.type === 'deduce') {
       const ex = R.explainDeduce(puzzle, I18N.lang);

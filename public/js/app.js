@@ -27,8 +27,8 @@
     const langBtn = UI.button('', { cls: 'small ghost', aria: t('common.language'), onClick: function () {
       UI.menu(langBtn, I18N.LANGS.map(function (l) { return { id: l.id, label: l.label }; }), function (id) { I18N.setLang(id); }, I18N.lang);
     } });
-    langBtn.innerHTML = '<span aria-hidden="true">🌐</span> ' + (I18N.lang === 'en' ? 'EN' : '中文');
-    const setBtn = UI.button('⚙', { cls: 'small ghost icon', aria: t('common.settings'), onClick: openSettings });
+    langBtn.textContent = I18N.lang === 'en' ? 'EN' : '中文'; langBtn.insertBefore(Icon.el('globe'), langBtn.firstChild);
+    const setBtn = UI.button('', { cls: 'small ghost icon', icon: 'gear', aria: t('common.settings'), onClick: openSettings });
     // 語言按鈕緊鄰設定按鈕（右上角）
     const right = el('div', { class: 'row', style: 'gap:8px;flex-wrap:nowrap' }, [langBtn, setBtn]);
     const bar = el('div', { class: 'topbar' }, [left, title, right]);
@@ -37,7 +37,7 @@
     const ctx = {
       screen: screen,
       setTitle: function (main, sub) { title.textContent = main; if (sub) title.appendChild(el('small', { text: sub })); },
-      setBack: function (fn, label) { left.textContent = ''; if (fn) left.appendChild(UI.button('←', { cls: 'small ghost icon', aria: label || t('common.back'), onClick: fn })); },
+      setBack: function (fn, label) { left.textContent = ''; if (fn) left.appendChild(UI.button('', { cls: 'small ghost icon', icon: 'back', aria: label || t('common.back'), onClick: fn })); },
       onDestroy: function (f) { App.destroy = f; },
       onRerender: function (f) { App.rerender = f; },
       onPause: function (p, r) { App.pauseFn = p; App.resumeFn = r; }
@@ -97,11 +97,12 @@
       el('h1', { class: 'logo', text: t('app.name') }),
       el('p', { class: 'tagline', text: t('app.tag') }),
       el('div', { class: 'menu' }, [
-        UI.button(t('home.campaign'), { cls: 'primary big block', onClick: function () { go('campaign'); } }),
-        UI.button(t('home.daily'), { cls: 'big block', onClick: function () { go('daily'); } }),
-        UI.button(t('home.online'), { cls: 'big block', onClick: function () { go('online'); } }),
-        UI.button(t('home.how'), { cls: 'ghost block', onClick: openHow })
+        UI.button(t('home.campaign'), { cls: 'primary big block', icon: 'solo', onClick: function () { go('campaign'); } }),
+        UI.button(t('home.daily'), { cls: 'big block', icon: 'daily', onClick: function () { go('daily'); } }),
+        UI.button(t('home.online'), { cls: 'big block', icon: 'online', onClick: function () { go('online'); } }),
+        UI.button(t('home.how'), { cls: 'ghost block', icon: 'book', onClick: openHow })
       ]),
+      el('div', { class: 'kind-strip', 'aria-label': t('home.foot') }, R.PUZZLE_KINDS.map(function (k) { return el('span', { class: 'kind-tag' }, [Icon.el(Icon.kind(k)), el('span', { text: t('kind.' + k) })]); })),
       el('p', { class: 'home-foot', text: t('home.foot') })
     ]);
     ctx.screen.appendChild(UI.scrollArea(col));
@@ -129,8 +130,12 @@
           if (!ok) { UI.toast(t('camp.locked'), true); return; }
           go('play', { mode: 'campaign', diff: diff, level: lv });
         } });
-        b.appendChild(el('span', { class: 'no', text: ok ? String(lv) : '🔒' }));
-        b.appendChild(el('span', { class: 'stars', text: boss ? t('camp.boss') + ' ' + UI.stars(Store.stars(diff, lv)) : UI.stars(Store.stars(diff, lv)) }));
+        const kind = R.levelKind(lv);
+        b.appendChild(ok ? el('span', { class: 'no', text: String(lv) }) : Icon.el('lock', 'lk'));
+        b.appendChild(el('span', { class: 'stars', text: UI.stars(Store.stars(diff, lv)) }));
+        b.appendChild(Icon.el(Icon.kind(kind), 'kd'));
+        b.title = (boss ? t('camp.boss') : t('kind.' + kind));
+        if (boss) b.appendChild(el('span', { class: 'bosstag', text: t('camp.boss') }));
         grid.appendChild(b);
       }
       gridHost.textContent = '';
@@ -153,16 +158,18 @@
       R.DIFFS.forEach(function (d) { tabs.appendChild(UI.button(t('diff.' + d), { cls: 'tab small' + (d === diff ? ' is-on' : ''), onClick: function () { diff = d; draw(); } })); });
       const best = Store.dailyBest(date, diff);
       const lim = R.dailyTimeLimitSec(diff);
+      const today = R.dailyPuzzles(date, diff);
       info.textContent = '';
       info.appendChild(el('h3', { text: t('daily.today', { d: date }) }));
       info.appendChild(el('p', { class: 'muted', style: 'margin:0', text: t('daily.sub') }));
       info.appendChild(el('div', { class: 'row' }, [
         el('span', { class: 'badge', text: t('diff.' + diff) }),
         el('span', { class: 'badge', text: lim ? lim + 's' : '∞' }),
-        el('span', { class: 'badge', text: '3 ×' }),
+        el('span', { class: 'badge', text: t('daily.count', { n: today.length }) }),
         best != null ? el('span', { class: 'badge', style: 'border-color:var(--green);color:var(--green)', text: t('daily.best', { s: best.toFixed(2) }) }) : null
       ]));
-      info.appendChild(UI.button(t('daily.start'), { cls: 'primary big block', onClick: function () { go('play', { mode: 'daily', diff: diff, date: date }); } }));
+      info.appendChild(el('div', { class: 'kind-strip left' }, today.map(function (pz, i) { return el('span', { class: 'kind-tag' }, [el('b', { class: 'mono', text: String(i + 1) }), Icon.el(Icon.kind(pz.type)), el('span', { text: t('kind.' + pz.type) })]); })));
+      info.appendChild(UI.button(t('daily.start'), { cls: 'primary big block', icon: 'play', onClick: function () { go('play', { mode: 'daily', diff: diff, date: date }); } }));
     }
     ctx.screen.appendChild(UI.scrollArea(el('div', { class: 'stack pad' }, [tabs, info])));
     draw();
@@ -190,12 +197,13 @@
     function drawHud() {
       const rem = remainSec();
       hud.textContent = '';
-      const chip = function (k, v, cls) { return el('div', { class: 'chip ' + (cls || '') }, [el('b', { text: v }), el('span', { text: t(k) })]); };
-      hud.appendChild(chip('play.level', daily ? '☼' : String(p.level)));
-      hud.appendChild(chip('play.step', (S.idx + 1) + '/' + puzzles.length));
-      hud.appendChild(el('div', { class: 'chip ' + (rem != null && rem <= 10 ? 'warn' : '') }, [el('b', { class: 'tm', text: rem == null ? (S.elapsed / 1000).toFixed(0) + 's' : Math.ceil(rem) + 's' }), el('span', { text: t('play.time') })]));
-      hud.appendChild(chip('play.hints', hintCap === Infinity ? '∞' : String(Math.max(0, hintCap - S.hints))));
-      hud.appendChild(chip('play.tries', String(S.tries)));
+      const chip = function (k, v, ic, cls, vcls) { return el('div', { class: 'chip ' + (cls || '') }, [Icon.el(ic, 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { class: vcls || '', text: v }), el('span', { text: t(k) })])]); };
+      const pz0 = puzzles[S.idx];
+      hud.appendChild(el('div', { class: 'chip kind' }, [Icon.el(Icon.kind(pz0.type), 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { text: t('kind.' + pz0.type) }), el('span', { text: daily ? t('daily.title') : t('camp.level', { n: p.level }) })])]));
+      hud.appendChild(chip('play.step', (S.idx + 1) + '/' + puzzles.length, 'stack'));
+      hud.appendChild(chip('play.time', rem == null ? (S.elapsed / 1000).toFixed(0) + 's' : Math.ceil(rem) + 's', 'clock', rem != null && rem <= 10 ? 'warn' : '', 'tm'));
+      hud.appendChild(chip('play.hints', hintCap === Infinity ? '∞' : String(Math.max(0, hintCap - S.hints)), 'bulb'));
+      hud.appendChild(chip('play.tries', String(S.tries), 'target'));
     }
     function tick() {
       if (S.ended || S.paused) { S.last = performance.now(); return; }
@@ -205,7 +213,7 @@
       const rem = remainSec();
       if (tm) tm.textContent = rem == null ? (S.elapsed / 1000).toFixed(0) + 's' : Math.ceil(rem) + 's';
       if (tm && rem != null) {
-        const w = rem <= 10; tm.parentNode.classList.toggle('warn', w);
+        const w = rem <= 10; tm.closest('.chip').classList.toggle('warn', w);
         if (w && Math.ceil(rem) !== S.lastBeep) { S.lastBeep = Math.ceil(rem); Audio2.sfx('tick'); }
       }
       if (rem === 0) finish('timeup');
@@ -234,11 +242,11 @@
       actions.textContent = '';
       const left = hintCap === Infinity ? Infinity : hintCap - S.hints;
       const hb = UI.button(t('play.hint') + ' (' + (hintCap === 0 ? '—' : (left === Infinity ? t('play.hintInf') : t('play.hintLeft', { n: left }))) + ')', {
-        cls: 'ghost small', title: hintCap === 0 ? t('play.hintNone') : null, disabled: hintCap === 0 || left <= 0, onClick: useHint
+        cls: 'ghost small', icon: 'hint', title: hintCap === 0 ? t('play.hintNone') : null, disabled: hintCap === 0 || left <= 0, onClick: useHint
       });
       actions.appendChild(hb);
-      actions.appendChild(UI.button(t('play.giveup'), { cls: 'ghost small', onClick: function () { finish('gaveup'); } }));
-      actions.appendChild(UI.button(t('play.exit'), { cls: 'ghost small danger', onClick: function () {
+      actions.appendChild(UI.button(t('play.giveup'), { cls: 'ghost small', icon: 'flagWhite', onClick: function () { finish('gaveup'); } }));
+      actions.appendChild(UI.button(t('play.exit'), { cls: 'ghost small danger', icon: 'exit', onClick: function () {
         S.paused = true;
         const m = UI.confirm(t('play.leaveAsk'), function () { exit(); });
         const closeOld = m.close; m.close = function () { closeOld(); S.paused = false; S.last = performance.now(); };
@@ -297,10 +305,10 @@
       ];
       puzzles.forEach(function (pz, i) { body2.push(Puzzle.solutionView(pz, puzzles.length > 1 ? t('res.puzzleN', { n: i + 1 }) : '')); });
       const foot = [];
-      foot.push(UI.button(t('common.again'), { cls: 'primary', onClick: function () { m.close(); go('play', p); } }));
-      if (win && !daily && p.level < R.LEVELS_PER_DIFF) foot.push(UI.button(t('common.next'), { cls: 'primary', onClick: function () { m.close(); go('play', { mode: 'campaign', diff: diff, level: p.level + 1 }); } }));
-      foot.push(UI.button(daily ? t('common.back') : t('common.levelList'), { cls: 'ghost', onClick: function () { m.close(); go(daily ? 'daily' : 'campaign', { diff: diff }); } }));
-      foot.push(UI.button(t('common.home'), { cls: 'ghost', onClick: function () { m.close(); go('home'); } }));
+      foot.push(UI.button(t('common.again'), { cls: 'primary', icon: 'retry', onClick: function () { m.close(); go('play', p); } }));
+      if (win && !daily && p.level < R.LEVELS_PER_DIFF) foot.push(UI.button(t('common.next'), { cls: 'primary', icon: 'play', onClick: function () { m.close(); go('play', { mode: 'campaign', diff: diff, level: p.level + 1 }); } }));
+      foot.push(UI.button(daily ? t('common.back') : t('common.levelList'), { cls: 'ghost', icon: daily ? 'daily' : 'stack', onClick: function () { m.close(); go(daily ? 'daily' : 'campaign', { diff: diff }); } }));
+      foot.push(UI.button(t('common.home'), { cls: 'ghost', icon: 'home', onClick: function () { m.close(); go('home'); } }));
       const m = UI.modal({ title: daily ? t('daily.title') : t('camp.level', { n: p.level }), body: body2, footer: foot, closable: false });
     }
 
