@@ -192,7 +192,7 @@
           else if (m.reason === 'kicked') UI.toast(t('room.kick'), true);
           resetRoomState(); S.invite = null; S.view = 'lobby'; render(); send({ t: 'lobbychat', op: 'join' });
           break;
-        case 'matchStart': if (S.role === 'play') ga(function (A) { A.start({ mode: 'online', players: S.room ? S.room.players.length : 2 }, 'm:' + Date.now()); });
+        case 'matchStart': if (!isSpec()) ga(function (A) { A.start({ mode: 'online', players: S.room ? S.room.players.length : 2 }, 'm:' + Date.now()); });
           S.leftMatch = false; if (S.match) { S.match.last = null; S.match.cur = null; S.match.finished = false; } if (finalDlg) { finalDlg.close(); finalDlg = null; } break;
         case 'round': onRound(m); break;
         case 'progress': S.done = m.done; drawBoard(); break;
@@ -200,7 +200,7 @@
         case 'solved': S.solved = true; Audio2.sfx('ok'); drawRoundStatus(); break;
         case 'wrong': if (widget) widget.bad(); Audio2.sfx('wrong'); Audio2.vibrate(80); UI.toast(t('play.wrong'), true); break;
         case 'roundEnd': onRoundEnd(m); break;
-        case 'matchEnd': if (S.role === 'play') ga(function (A) { A.end({ result: m.winners.indexOf(pid) !== -1 ? 'win' : 'lose' }); }); onMatchEnd(m); break;
+        case 'matchEnd': if (!isSpec()) ga(function (A) { A.end({ result: m.winners.indexOf(pid) !== -1 ? 'win' : 'lose' }); }); onMatchEnd(m); break;
         case 'error': onError(m); break;
         default: break;
       }
@@ -238,6 +238,8 @@
       const p = S.room.players.concat(S.room.spectators).filter(function (x) { return x.pid === id; })[0];
       return p ? p.name : '?';
     }
+    // 以房間名單判斷是否為觀戰者（中途改角色時不會再收到 joined）
+    function isSpec() { return !!(S.room && !S.room.players.some(function (p) { return p.pid === pid; })); }
     function isHost() { return S.room && S.room.hostPid === pid; }
     function cleanupView() {
       if (widget) { widget.destroy(); widget = null; }
@@ -543,7 +545,7 @@
           panel.appendChild(grid);
         }
         panel.appendChild(UI.button(t('m.pick'), { cls: 'primary big block', disabled: !act, onClick: function () { if (val == null) { UI.toast(t('err.bad_pick'), true); return; } send({ t: 'm:pick', v: val }); } }));
-        if (S.role === 'spec') panel.style.display = 'none';
+        if (isSpec()) panel.style.display = 'none';
         M.content.appendChild(panel);
       } else if (cur.kind === 'auction') {
         const me = S.match.players[pid] || { bank: 0 };
@@ -557,7 +559,7 @@
         panel.appendChild(big); panel.appendChild(sl);
         panel.appendChild(el('div', { class: 'row', style: 'justify-content:center' }, [-5, -1, 1, 5].map(function (d) { return UI.button((d > 0 ? '+' : '−') + Math.abs(d), { cls: 'small', onClick: function () { adj(d); } }); })));
         panel.appendChild(UI.button(t('m.bidGo'), { cls: 'primary big block', disabled: !act, onClick: function () { send({ t: 'm:pick', v: bid }); } }));
-        if (S.role === 'spec') panel.style.display = 'none';
+        if (isSpec()) panel.style.display = 'none';
         M.content.appendChild(panel);
       } else if (cur.kind === 'hilo') {
         const others = (cur.view && cur.view.others) || {};
@@ -572,7 +574,7 @@
         ['H', 'L', 'M'].forEach(function (k) { const b = UI.button(t('m.call.' + k), { cls: 'ghost', onClick: function () { call = k; Object.keys(btns).forEach(function (x) { btns[x].classList.toggle('is-on', x === k); }); } }); btns[k] = b; group.appendChild(b); });
         panel.appendChild(group);
         panel.appendChild(UI.button(t('play.submit'), { cls: 'primary big block', disabled: !act, onClick: function () { if (!call) { UI.toast(t('m.pickOne'), true); return; } send({ t: 'm:pick', v: call }); } }));
-        if (S.role === 'spec' || !cur.view) panel.style.display = 'none';
+        if (isSpec() || !cur.view) panel.style.display = 'none';
         M.content.appendChild(panel);
       } else if (cur.kind === 'remove') {
         const hand = (cur.view && cur.view.hand) || [];
@@ -591,7 +593,7 @@
         });
         panel.appendChild(row);
         panel.appendChild(UI.button(t('play.submit'), { cls: 'primary big block', disabled: !act, onClick: function () { if (sel.length !== 2) { UI.toast(t('m.pickTwo'), true); return; } send({ t: 'm:pick', v: sel.slice().sort() }); } }));
-        if (S.role === 'spec' || !cur.view) panel.style.display = 'none';
+        if (isSpec() || !cur.view) panel.style.display = 'none';
         M.content.appendChild(panel);
       } else {
         const puzzle = cur.puzzle;
