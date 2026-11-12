@@ -474,3 +474,9 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
 .slot.wide { display: flex; align-items: center; justify-content: center; gap: 4px; }
 /* 平板：題目圖放大，好看清楚 */
 @media (min-width: 700px) and (pointer: coarse) { .play .fig-wrap svg.figure { max-width: 600px !important; } }
+.pad-grid .num { min-width: 0; }   /* 小手機：五欄鍵盤不得撐破面板 */
+.hud .chip { min-width: 0; overflow: hidden; }   /* HUD 格線不得被內文撐寬 */
+.slots { flex-wrap: wrap; }
+.ops .btn { min-width: 0; }
+@media (max-width: 400px) { .ops { grid-template-columns: repeat(4, 1fr); } }   /* 小手機：運算鍵排兩列，按鍵仍夠大 */
+.pad-grid .btn { min-width: 0; }

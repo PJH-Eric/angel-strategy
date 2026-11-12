@@ -39,6 +39,22 @@ const CHECK = function () {
     const r = el.getBoundingClientRect();
     if (!r.width || !r.height) return;
     if ((r.right > vw + 1 || r.left < -1) && !clipped(el) && !el.closest('svg') && !el.closest('.hazard,.toast,.menu-pop')) out.push('超出視窗：' + el.tagName + '.' + String(el.className).slice(0, 30) + ' [' + Math.round(r.left) + ',' + Math.round(r.right) + ']');
+    if ((el.classList.contains('btn') || el.classList.contains('slot')) && !el.closest('svg')) {
+      const pan = el.closest('.panel, .dialog');
+      if (pan) { const pr = pan.getBoundingClientRect(); if (r.right > pr.right + 1 || r.left < pr.left - 1) out.push('元素超出面板：' + el.tagName + '.' + String(el.className).slice(0, 30) + ' [' + Math.round(r.left) + ',' + Math.round(r.right) + '] 面板 [' + Math.round(pr.left) + ',' + Math.round(pr.right) + ']'); }
+    }
+    // 被捲動區或 overflow:hidden 的容器「裁掉」的內容也算破版（橫向捲動容器 .h 與 SVG 除外）
+    if (!el.closest('svg,.hazard,.toast,.menu-pop,.sa-view.h') && r.width < vw * 3) {
+      for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+        const cs2 = getComputedStyle(p);
+        if (/(hidden|auto|scroll|clip)/.test(cs2.overflowX)) {
+          if (cs2.textOverflow === 'ellipsis' || p.classList.contains('sa-view') && p.classList.contains('h')) break;
+          const pr2 = p.getBoundingClientRect();
+          if (r.right > pr2.right + 2 && pr2.width > 40) out.push('內容被裁切：' + el.tagName + '.' + String(el.className).slice(0, 30) + ' 右緣 ' + Math.round(r.right) + ' > 容器 ' + Math.round(pr2.right));
+          break;
+        }
+      }
+    }
     const tag = el.tagName;
     if (tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'INPUT' && /^(checkbox|radio|range|number|date|file|color)$/.test(el.type))) out.push('原生控制項：' + tag + (el.type ? '[' + el.type + ']' : ''));
     if (/(auto|scroll)/.test(cs.overflowY) && el.scrollHeight > el.clientHeight + 1 && !el.classList.contains('sa-view') && cs.scrollbarWidth !== 'none') out.push('原生捲軸：' + el.tagName + '.' + String(el.className).slice(0, 30));

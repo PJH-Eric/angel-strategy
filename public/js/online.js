@@ -512,8 +512,9 @@
       });
       M.chips.textContent = '';
       const r = S.match.cur ? S.match.cur.index : S.match.round;
-      M.chips.appendChild(el('div', { class: 'chip' }, [Icon.el('flag', 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { text: r + '/' + S.match.rounds }), el('span', { text: t('m.round', { a: '', b: '' }).replace(/[\d/\s]+/g, ' ').trim() || 'ROUND' })])]));
+      // 手機上題型標籤佔整列，回合與時間並排在下一列
       if (S.match.cur) M.chips.appendChild(el('div', { class: 'chip kind' }, [Icon.el(Icon.kind(S.match.cur.kind), 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { text: kindLabel(S.match.cur.kind) }), el('span', { text: t('m.thisRound') })])]));
+      M.chips.appendChild(el('div', { class: 'chip' }, [Icon.el('flag', 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { text: r + '/' + S.match.rounds }), el('span', { text: t('m.round', { a: '', b: '' }).replace(/[\d/\s]+/g, ' ').trim() || 'ROUND' })])]));
       M.chips.appendChild(el('div', { class: 'chip', id: 'tmchip' }, [Icon.el('clock', 'chip-ic'), el('div', { class: 'chip-tx' }, [el('b', { class: 'tm', text: '—' }), el('span', { text: t('play.time') })])]));
       drawRoundStatus();
     }
@@ -553,7 +554,8 @@
       M.content.textContent = '';
       drawBoard();
       const act = canAct() && !(S.picked || S.solved);
-      M.content.appendChild(el('div', { class: 'panel' }, [el('h3', { class: 'kind-h' }, [Icon.el(Icon.kind(cur.kind)), el('span', { text: kindLabel(cur.kind) })]), cur.kind === 'num' ? el('p', { style: 'margin:0', text: numHelp(cur.params) }) : (isPick(cur.kind) ? el('p', { style: 'margin:0', text: t('m.help.' + cur.kind, { prize: cur.params && cur.params.prize }) }) : null)]));
+      // 搶答題不需要標題框（上方已有題型標籤），只有心理戰顯示規則說明
+      if (isPick(cur.kind)) M.content.appendChild(el('div', { class: 'panel' }, [el('h3', { class: 'kind-h' }, [Icon.el(Icon.kind(cur.kind)), el('span', { text: kindLabel(cur.kind) })]), cur.kind === 'num' ? el('p', { style: 'margin:0', text: numHelp(cur.params) }) : (isPick(cur.kind) ? el('p', { style: 'margin:0', text: t('m.help.' + cur.kind, { prize: cur.params && cur.params.prize }) }) : null)]));
       if (cur.kind === 'num') {
         const p = cur.params; let val = Math.round((p.min + p.max) / 2);
         const panel = el('div', { class: 'panel stack' });
@@ -598,7 +600,8 @@
         panel.appendChild(row);
         let call = null; const btns = {};
         const group = el('div', { class: 'row', style: 'justify-content:center' });
-        ['H', 'L', 'M'].forEach(function (k) { const b = UI.button(t('m.call.' + k), { cls: 'ghost', onClick: function () { call = k; Object.keys(btns).forEach(function (x) { btns[x].classList.toggle('is-on', x === k); }); } }); btns[k] = b; group.appendChild(b); });
+        // 只有兩人時一定有一人最大、一人最小，「都不是」不可能成立 → 不顯示
+        (Object.keys(others).length >= 2 ? ['H', 'L', 'M'] : ['H', 'L']).forEach(function (k) { const b = UI.button(t('m.call.' + k), { cls: 'ghost', onClick: function () { call = k; Object.keys(btns).forEach(function (x) { btns[x].classList.toggle('is-on', x === k); }); } }); btns[k] = b; group.appendChild(b); });
         panel.appendChild(group);
         panel.appendChild(UI.button(t('play.submit'), { cls: 'primary big block', disabled: !act, onClick: function () { if (!call) { UI.toast(t('m.pickOne'), true); return; } send({ t: 'm:pick', v: call }); } }));
         if (isSpec() || !cur.view) panel.style.display = 'none';

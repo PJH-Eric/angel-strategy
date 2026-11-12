@@ -400,8 +400,9 @@
       ids.forEach(function (id) {
         truth[id] = hiloTruth(cards, id);
         points[id] = (calls[id] === truth[id]) ? 2 : 0;
-        ranks[id] = points[id] > 0 ? 1 : 2;
       });
+      const anyRight = ids.some(function (id) { return points[id] > 0; });
+      ids.forEach(function (id) { ranks[id] = points[id] > 0 || !anyRight ? 1 : 2; });
       const winners = ids.filter(function (id) { return points[id] > 0; });
       return { points: points, ranks: ranks, winners: winners, info: { cards: cards, truth: truth, calls: calls } };
     }
