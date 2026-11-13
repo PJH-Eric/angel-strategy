@@ -121,8 +121,7 @@
   App.screens.home = function (ctx) {
     ctx.setTitle(t('app.name'));
     ctx.setLobby();
-    const halo = '<svg viewBox="0 0 120 120" aria-hidden="true"><g class="ring" fill="none" stroke="#f2a81d" stroke-width="3"><ellipse cx="60" cy="26" rx="34" ry="10"/><ellipse cx="60" cy="26" rx="24" ry="6" stroke-width="1.5" opacity=".6"/></g>' +
-      '<g fill="none" stroke="#5cb7cf" stroke-width="2.5" stroke-linejoin="round"><path d="M60 40 L38 64 L14 52 L30 84 L60 104 L90 84 L106 52 L82 64 Z" fill="rgba(92,183,207,.08)"/><path d="M60 40 V104 M38 64 L60 84 L82 64" opacity=".6"/></g></svg>';
+    const halo = Icon.logo;
     const col = el('div', { class: 'home' }, [
       el('div', { class: 'halo', html: halo }),
       el('h1', { class: 'logo', text: t('app.name') }),

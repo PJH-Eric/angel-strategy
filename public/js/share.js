@@ -80,9 +80,13 @@
     for (let y = 0; y < H; y += 44) { ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(W, y + .5); ctx.stroke(); }
     hazard(ctx, 0, W); hazard(ctx, H - 14, W);
     // 標誌與標題
-    ctx.strokeStyle = C.amber; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(P + 46, 76, 40, 12, 0, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = C.cyan; ctx.lineWidth = 4; ctx.lineJoin = 'round';
-    ctx.beginPath(); ctx.moveTo(P + 46, 98); ctx.lineTo(P + 22, 124); ctx.lineTo(P - 2, 112); ctx.lineTo(P + 16, 148); ctx.lineTo(P + 46, 168); ctx.lineTo(P + 76, 148); ctx.lineTo(P + 94, 112); ctx.lineTo(P + 70, 124); ctx.closePath(); ctx.stroke();
+    try {
+      const lg = await new Promise(function (resolve, reject) {
+        const img = new Image(); img.onload = function () { resolve(img); }; img.onerror = reject;
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(Icon.logo.replace('<svg ', '<svg width="200" height="160" '));
+      });
+      ctx.drawImage(lg, P - 10, 40, 125, 100);
+    } catch (e) { /* 標誌載入失敗就只留文字 */ }
     ctx.fillStyle = '#eaf2f7'; ctx.font = '900 64px ' + FONT; ctx.textBaseline = 'alphabetic';
     ctx.fillText(t('app.name'), P + 124, 128);
     ctx.fillStyle = C.cyan; ctx.font = '700 24px ' + FONT; ctx.fillText('ANGEL STRATEGY', P + 128, 166);
