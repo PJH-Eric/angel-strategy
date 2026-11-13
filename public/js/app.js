@@ -397,11 +397,15 @@
       body.appendChild(left); body.appendChild(right);
       drawHintBox();
       drawActions();
+      // 圖太大時自動縮小，讓整題不必捲動；換題或離開時停止
+      const stopFit = Puzzle.autoFit(body, main.parentElement), d0 = S.widget.destroy;
+      S.widget.destroy = function () { stopFit(); d0(); };
     }
     function drawHintBox() {
       hintBox.textContent = '';
       if (!S.hintMsgs.length) { hintBox.style.display = 'none'; return; }
       hintBox.style.display = '';
+      requestAnimationFrame(function () { Puzzle.fitFigure(body, main.parentElement); });
       hintBox.appendChild(el('h4', { text: t('play.hint') }));
       S.hintMsgs.forEach(function (m) { hintBox.appendChild(el('div', { class: 'mono', text: m })); });
     }

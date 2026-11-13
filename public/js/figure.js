@@ -174,7 +174,7 @@
   function scaleFigure(pz, assign, lang, opts) {
     opts = opts || {};
     const t = T(lang);
-    const W = 380, RH = 128, TOP = 30;
+    const W = 380, RH = 112, TOP = 30;   // 每座天平佔 112：支架 52、盤面與砝碼到 y0+56，傾斜時仍有餘裕
     const sol = !!opts.solution;
     const H = TOP + pz.scales.length * RH + (sol ? 56 : 8);
     const root = svgRoot(W, H, t('fig.scaleAlt'));

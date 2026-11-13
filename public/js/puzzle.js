@@ -308,7 +308,7 @@
     const fig = el('div', { class: 'fig-wrap' });
     const cluesEl = el('div', null, [fig, el('p', { class: 'muted', style: 'font-size:.85em', text: t('play.pyrHelp') })]);
     const glyph = { '+': '＋', '-': '−', '*': '×' };
-    const rowsEl = el('div', { class: 'stack' });
+    const rowsEl = el('div', { class: 'stack pyr-rows' });
     const btns = [], rowEls = [];
     for (let l = 0; l < puzzle.n - 1; l++) (function (l) {
       const row = el('div', { class: 'row', style: 'justify-content:center;align-items:center' }, [el('span', { class: 'label', style: 'min-width:4.5em', text: t('play.pyrLevel', { n: l + 1 }) })]);
@@ -399,5 +399,34 @@
     return ex.steps[0];
   }
 
-  window.Puzzle = { mount: mount, mountDeduce: mountDeduce, mountArith: mountArith, solutionView: solutionView, hintText: hintText };
+  /* 題目圖自動縮放：圖太大時縮小到整題不必捲動就看得到全貌（有最小尺寸，太小就保留捲動） */
+  function fitFigure(scope, view) {
+    const wrap = scope && scope.querySelector('.fig-wrap');
+    if (!wrap || !view) return;
+    wrap.style.removeProperty('--fig-max');
+    const svg = wrap.querySelector('svg.figure');
+    if (!svg) return;
+    for (let k = 0; k < 3; k++) {
+      const over = view.scrollHeight - view.clientHeight;
+      if (over <= 1) return;
+      const r = svg.getBoundingClientRect();
+      if (!r.height) return;
+      const minH = Math.min(r.height, Math.max(180, view.clientHeight * 0.34));
+      const h = Math.max(minH, r.height - over - 2);
+      if (h >= r.height - 1) return;
+      wrap.style.setProperty('--fig-max', Math.floor(h * r.width / r.height) + 'px');
+      // 縮了也沒有比較好（另一欄比較高）就還原
+      if (view.scrollHeight - view.clientHeight >= over) { wrap.style.removeProperty('--fig-max'); return; }
+    }
+  }
+  // 掛上自動縮放：載入、旋轉、視窗大小改變時重算；回傳停止函式
+  function autoFit(scope, view) {
+    let raf = 0;
+    const run = function () { cancelAnimationFrame(raf); raf = requestAnimationFrame(function () { fitFigure(scope, view); }); };
+    window.addEventListener('resize', run);
+    run();
+    return function () { cancelAnimationFrame(raf); window.removeEventListener('resize', run); };
+  }
+
+  window.Puzzle = { mount: mount, mountDeduce: mountDeduce, mountArith: mountArith, solutionView: solutionView, hintText: hintText, fitFigure: fitFigure, autoFit: autoFit };
 })();

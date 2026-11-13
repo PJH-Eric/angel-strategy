@@ -640,6 +640,8 @@
         const grid = el('div', { class: 'play' + (puzzle.type === 'scale' || puzzle.type === 'pyramid' ? ' fig-main' : '') }, [el('div', { class: 'panel' }, [widget.cluesEl]), el('div', { class: 'panel' }, [widget.entryEl])]);
         if (!act) grid.style.opacity = '.55';
         M.content.appendChild(grid);
+        const stopFit = Puzzle.autoFit(grid, grid.closest('.sa-view')), d0 = widget.destroy;
+        widget.destroy = function () { stopFit(); d0(); };
       }
       Audio2.sfx('reveal');
       drawRoundStatus();

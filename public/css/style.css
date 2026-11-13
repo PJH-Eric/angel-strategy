@@ -260,6 +260,7 @@ body { touch-action: manipulation; }
 /* ===== 解法圖（SVG）與新題型 ===== */
 .fig-wrap { display: grid; justify-items: center; margin: 6px 0 10px; }
 .fig-wrap.bad { animation: shake .35s; }
+.play .fig-wrap svg.figure { max-width: var(--fig-max, 100%); }   /* 由 Puzzle.fitFigure 依可用高度縮小 */
 svg.figure { width: 100%; height: auto; display: block; background: #0b1014; border: 1px solid var(--line); }
 .fg-t { font-family: var(--mono); font-size: 13px; fill: var(--text); }
 .fg-title { font: 700 14px var(--sans); fill: var(--amber); }
@@ -473,7 +474,7 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
 }
 .slot.wide { display: flex; align-items: center; justify-content: center; gap: 4px; }
 /* 平板：題目圖放大，好看清楚 */
-@media (min-width: 700px) and (pointer: coarse) { .play .fig-wrap svg.figure { max-width: 600px !important; } }
+@media (min-width: 700px) and (pointer: coarse) { .play .fig-wrap svg.figure { max-width: min(600px, var(--fig-max, 600px)) !important; } }
 .pad-grid .num { min-width: 0; }   /* 小手機：五欄鍵盤不得撐破面板 */
 .hud .chip { min-width: 0; overflow: hidden; }   /* HUD 格線不得被內文撐寬 */
 .slots { flex-wrap: wrap; }
@@ -496,7 +497,7 @@ html, body { overscroll-behavior: none; }               /* 避免拉動整頁觸
 .narrow-page { max-width: 860px; margin: 0 auto; width: 100%; }
 @media (min-width: 900px) {
   .play.fig-main { grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); }
-  .play.fig-main .fig-wrap svg.figure { max-width: 640px !important; }
+  .play.fig-main .fig-wrap svg.figure { max-width: min(640px, var(--fig-max, 640px)) !important; }
 }
 /* 平板／桌機：找規則範例排兩欄，輸入與輸出靠近好對照 */
 @media (min-width: 700px) {
@@ -575,3 +576,20 @@ html:lang(ja) body, html:lang(ko) body { word-break: keep-all; overflow-wrap: an
 .sol-locked { display: flex; gap: 12px; align-items: center; border-left-color: var(--dim); }
 .sol-locked > .ic { width: 30px; height: 30px; color: var(--amber); }
 .sol-locked p { margin: 2px 0 0; }
+/* 手機直拿：遊玩畫面精簡留白，讓題目與作答區盡量同屏（按鍵仍保持 44px 以上） */
+@media (max-width: 560px) {
+  .play { gap: 10px; }
+  .play .panel { padding: 10px; }
+  .play .fig-wrap { margin: 2px 0 6px; }
+  .play .fig-wrap + p.muted, .rule-table + p.muted { font-size: .8em !important; margin: 4px 0 0; line-height: 1.45; }
+  .hud { gap: 6px; }
+  .hud .chip { min-height: 38px; padding: 2px 6px; }
+  .hud .chip.kind .chip-tx span { display: none; }
+  .rule-row:not(.test) { padding: 5px 12px; min-height: 0; }
+  .rule-row.test { min-height: 46px; }
+  .pyr-rows { gap: 6px; }
+  .pyr-rows .num { min-height: 44px; min-width: 52px; }
+  .pyr-rows .label { margin: 0; }
+  .play .slots:has(.slot.wide) { flex-wrap: nowrap; gap: 6px; }   /* 天平：五個圖形排成一列 */
+  .play .slot.wide { width: auto; flex: 1 1 0; max-width: 76px; min-width: 0; aspect-ratio: auto; min-height: 50px; padding: 0 2px; }
+}
