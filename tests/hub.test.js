@@ -176,8 +176,9 @@ t('逾時未出手 0 分；籌碼制歸零者出局，剩一人即結束', async
   b.say({ t: 'room:join', id: a.last('room').room.id });
   a.say({ t: 'room:start' });
   const r = roomOf(hub, a);
-  let guard = 0;
-  while (!r.match.core.finished && guard++ < 400) {
+  // 以實際時間為上限：搶答題時限較長，20 回合最壞情況需數秒，固定迴圈次數在較慢的 CI 會不夠
+  const deadline = Date.now() + 30000;
+  while (!r.match.core.finished && Date.now() < deadline) {
     await sleep(10);
     const cur = r.match.cur;
     if (!cur) continue;
