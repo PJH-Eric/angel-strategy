@@ -594,3 +594,19 @@ html:lang(ja) body, html:lang(ko) body { word-break: keep-all; overflow-wrap: an
   .play .slots:has(.slot.wide) { flex-wrap: nowrap; gap: 6px; }   /* 天平：五個圖形排成一列 */
   .play .slot.wide { width: auto; flex: 1 1 0; max-width: 76px; min-width: 0; aspect-ratio: auto; min-height: 50px; padding: 0 2px; }
 }
+/* 3‧2‧1 開始遮罩：蓋住題目，倒數完才顯示並開始計時 */
+.cd { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; background-color: #06090b;   /* 完全不透明，倒數時看不到題目 */
+  background-image: repeating-linear-gradient(0deg, rgba(92,183,207,.05) 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, rgba(92,183,207,.05) 0 1px, transparent 1px 40px);
+  transition: opacity .25s; touch-action: none; user-select: none; }
+.cd.out { opacity: 0; pointer-events: none; }
+.cd-box { display: grid; justify-items: center; gap: 10px; text-align: center; }
+.cd-ring { width: clamp(150px, 34vmin, 260px); aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; position: relative;
+  border: 3px solid rgba(92,183,207,.35); box-shadow: 0 0 40px rgba(92,183,207,.15) inset; }
+.cd-ring::before { content: ''; position: absolute; inset: -9px; border-radius: 50%; border: 2px dashed rgba(242,168,29,.45); }
+.cd-n { font: 900 clamp(84px, 22vmin, 170px)/1 var(--mono); color: var(--amber); text-shadow: 0 0 26px rgba(242,168,29,.55); }
+.cd-n.pop { animation: cdpop .7s cubic-bezier(.2,.9,.3,1.2); }
+.cd-n.go { font-size: clamp(40px, 10vmin, 80px); color: var(--cyan); text-shadow: 0 0 26px rgba(92,183,207,.6); letter-spacing: .04em; }
+.cd-tag { font: 700 clamp(14px, 2.4vmin, 18px) inherit; letter-spacing: .4em; color: var(--dim); text-indent: .4em; }
+.cd-sub { font-size: .95em; color: var(--text, #dfe8ee); opacity: .85; }
+@keyframes cdpop { 0% { transform: scale(1.8); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+body.reduce-motion .cd-n.pop { animation: none; }

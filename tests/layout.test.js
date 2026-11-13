@@ -101,6 +101,7 @@ const CHECK = function () {
       const ctx = await browser.newContext({ viewport: { width: v[1], height: v[2] }, hasTouch: v[3] });
       // 幼幼與神話 1～12 關、困難第 10 關都算「已通關」，結算才看得到解法圖
       await ctx.addInitScript('localStorage.setItem("as.progress.v1", JSON.stringify({baby:' + JSON.stringify(prog) + ',myth:' + JSON.stringify(prog) + ',hard:' + JSON.stringify(prog) + '}))');
+      await ctx.addInitScript('window.__noCountdown = true');   // 其餘場景略過 3‧2‧1，倒數另有專屬場景
       const pg = await ctx.newPage();
       pg.on('pageerror', function (e) { errors.push(v[0] + '/' + lang + ' pageerror ' + e.message); });
       pg.on('console', function (m) { if (m.type() === 'error') errors.push(v[0] + '/' + lang + ' console ' + m.text()); });
@@ -126,6 +127,13 @@ const CHECK = function () {
       if (await pg.evaluate(function () { return !!document.querySelector('.lobby-link'); })) problems.push(v[0] + '/' + lang + '/campaign：回遊戲大廳按鈕只應出現在首頁');
       await scene('daily', async function () { await pg.evaluate(function () { App.go('daily', { diff: 'normal' }); }); });
       await scene('random', async function () { await pg.evaluate(function () { App.go('random', { diff: 'hard' }); }); });
+      await scene('countdown', async function () { await pg.evaluate(function () { window.__noCountdown = false; App.go('play', { diff: 'normal', level: 3 }); }); await pg.waitForSelector('.cd'); await pg.waitForTimeout(900); });
+      if (await pg.evaluate(function () { const c = document.querySelector('.cd'); if (!c) return 'missing'; const r = c.getBoundingClientRect(), p = document.querySelector('.screen .sa-view').getBoundingClientRect(); return r.top <= p.top && r.bottom >= p.bottom && r.left <= p.left && r.right >= p.right ? '' : 'leak'; }) !== '') problems.push(v[0] + '/' + lang + '/countdown：倒數遮罩沒有完整蓋住題目');
+      const tm0 = await pg.evaluate(function () { return document.querySelector('.hud .tm').textContent; });
+      await pg.waitForSelector('.cd', { state: 'detached', timeout: 5000 });
+      const tm1 = await pg.evaluate(function () { return document.querySelector('.hud .tm').textContent; });
+      if (parseInt(tm0, 10) - parseInt(tm1, 10) > 1) problems.push(v[0] + '/' + lang + '/countdown：倒數期間不應計時（' + tm0 + '→' + tm1 + '）');
+      await pg.evaluate(function () { window.__noCountdown = true; });
       await scene('play-random', async function () { await pg.evaluate(function () { App.go('play', { mode: 'random', diff: 'hard', seed: 'audit' }); }); await pg.waitForSelector('.panel'); });
       const kinds = ['deduce', 'arith', 'pyramid', 'rule', 'near', 'scale'];
       for (let lv = 1; lv <= 6; lv++) {

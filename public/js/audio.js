@@ -46,6 +46,8 @@
     ok: function () { tone(523, 0.12, 'triangle', 0.25); tone(784, 0.18, 'triangle', 0.25, 0.1); },
     wrong: function () { tone(180, 0.22, 'sawtooth', 0.22, 0, 90); },
     tick: function () { tone(1000, 0.03, 'square', 0.08); },
+    count: function () { tone(660, 0.12, 'square', 0.14); },
+    go: function () { tone(988, 0.1, 'square', 0.16); tone(1318, 0.22, 'triangle', 0.22, 0.09); },
     alarm: function () { tone(880, 0.08, 'square', 0.15); tone(880, 0.08, 'square', 0.15, 0.14); },
     win: function () { [523, 659, 784, 1046].forEach(function (f, i) { tone(f, 0.2, 'triangle', 0.25, i * 0.12); }); },
     lose: function () { [392, 330, 262, 196].forEach(function (f, i) { tone(f, 0.28, 'sawtooth', 0.18, i * 0.16); }); },

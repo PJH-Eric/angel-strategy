@@ -201,5 +201,29 @@
   function stars(n) { return n ? '★'.repeat(n) + '☆'.repeat(3 - n) : ''; }
   function fmtSec(ms) { return (ms / 1000).toFixed(2); }
 
-  window.UI = { el: el, button: button, scrollArea: scrollArea, toggle: toggle, slider: slider, input: input, menu: menu, closeMenus: closeMenus, modal: modal, confirm: confirmBox, toast: toast, stars: stars, fmtSec: fmtSec };
+  /* 3‧2‧1 開始遮罩：蓋住 host（題目看不到、也點不到），倒數完淡出並呼叫 onDone；回傳取消函式
+     o: { ready: '準備', go: '開始！', sub: 副標（關卡名）, onTick(n), onGo(), onDone() } */
+  function countdown(host, o) {
+    o = o || {};
+    const num = el('div', { class: 'cd-n', text: '3' });
+    const box = el('div', { class: 'cd', role: 'status', 'aria-live': 'assertive' }, [el('div', { class: 'cd-box' }, [
+      el('div', { class: 'cd-tag', text: o.ready || '' }),
+      el('div', { class: 'cd-ring' }, [num]),
+      o.sub ? el('div', { class: 'cd-sub', text: o.sub }) : null
+    ].filter(Boolean))]);
+    host.appendChild(box);
+    const timers = [];
+    let dead = false;
+    const show = function (txt, cls) {
+      num.className = 'cd-n'; void num.offsetWidth;
+      num.textContent = txt; num.className = 'cd-n pop' + (cls ? ' ' + cls : '');
+    };
+    [3, 2, 1].forEach(function (n, i) { timers.push(setTimeout(function () { show(String(n)); if (o.onTick) o.onTick(n); }, i * 800)); });
+    timers.push(setTimeout(function () { show(o.go || 'GO', 'go'); if (o.onGo) o.onGo(); }, 2400));
+    timers.push(setTimeout(function () { box.classList.add('out'); if (!dead && o.onDone) o.onDone(); }, 3000));
+    timers.push(setTimeout(function () { box.remove(); }, 3300));
+    return function () { dead = true; timers.forEach(clearTimeout); box.remove(); };
+  }
+
+  window.UI = { countdown: countdown, el: el, button: button, scrollArea: scrollArea, toggle: toggle, slider: slider, input: input, menu: menu, closeMenus: closeMenus, modal: modal, confirm: confirmBox, toast: toast, stars: stars, fmtSec: fmtSec };
 })();

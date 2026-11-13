@@ -370,7 +370,7 @@
       hud.appendChild(chip('play.tries', String(S.tries), 'target'));
     }
     function tick() {
-      if (S.ended || S.paused) { S.last = performance.now(); return; }
+      if (S.ended || S.paused || S.counting) { S.last = performance.now(); return; }
       const now = performance.now();
       S.elapsed += now - S.last; S.last = now;
       const tm = hud.querySelector('.tm');
@@ -523,6 +523,16 @@
     if (p._resume) Object.assign(S, p._resume, { ended: false, last: performance.now() });
     drawHud(); mountPuzzle();
     timer = setInterval(tick, 100);
+    // 3‧2‧1 開始：新開局才倒數（切換語言接續進度時不再倒數），倒數期間題目被遮住、不計時
+    if (!p._resume && !window.__noCountdown) {   // __noCountdown：只給自動化測試略過倒數
+      S.counting = true;
+      const stopCd = UI.countdown(ctx.screen, {
+        ready: t('play.ready'), go: t('play.go'), sub: modeTitle + ' · ' + t('diff.' + diff),
+        onTick: function () { Audio2.sfx('count'); }, onGo: function () { Audio2.sfx('go'); Audio2.vibrate(20); },
+        onDone: function () { S.counting = false; S.last = performance.now(); }
+      });
+      ctx.onDestroy(function () { stopCd(); stop(); });   // onDestroy 只保留一個，合併停止計時
+    }
   };
 
   /* ---------- 啟動 ---------- */
