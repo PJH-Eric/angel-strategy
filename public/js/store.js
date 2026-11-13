@@ -6,10 +6,19 @@
   function read(k, fb) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } }
   function write(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } }
 
-  const ADJ = ['冷靜的', '沉默的', '機警的', '好奇的', '安靜的', '勇敢的', '謹慎的', '快速的'];
-  const ANI = ['貓頭鷹', '狐狸', '烏鴉', '水獺', '刺蝟', '浣熊', '企鵝', '松鼠'];
-  const ADJ_EN = ['Calm', 'Silent', 'Sharp', 'Curious', 'Quiet', 'Brave', 'Careful', 'Quick'];
-  const ANI_EN = ['Owl', 'Fox', 'Crow', 'Otter', 'Hedgehog', 'Raccoon', 'Penguin', 'Squirrel'];
+  // 隨機暱稱「形容詞＋小動物」，依目前語言產生
+  const NAMES = {
+    'zh-TW': [['冷靜的', '沉默的', '機警的', '好奇的', '安靜的', '勇敢的', '謹慎的', '快速的'], ['貓頭鷹', '狐狸', '烏鴉', '水獺', '刺蝟', '浣熊', '企鵝', '松鼠'], ''],
+    'zh-CN': [['冷静的', '沉默的', '机警的', '好奇的', '安静的', '勇敢的', '谨慎的', '快速的'], ['猫头鹰', '狐狸', '乌鸦', '水獭', '刺猬', '浣熊', '企鹅', '松鼠'], ''],
+    en: [['Calm', 'Silent', 'Sharp', 'Curious', 'Quiet', 'Brave', 'Careful', 'Quick'], ['Owl', 'Fox', 'Crow', 'Otter', 'Hedgehog', 'Raccoon', 'Penguin', 'Squirrel'], ' '],
+    ja: [['冷静な', '無口な', '鋭い', '好奇心旺盛な', '静かな', '勇敢な', '慎重な', '素早い'], ['フクロウ', 'キツネ', 'カラス', 'カワウソ', 'ハリネズミ', 'アライグマ', 'ペンギン', 'リス'], ''],
+    ko: [['침착한', '조용한', '날쌘', '호기심 많은', '고요한', '용감한', '신중한', '재빠른'], ['부엉이', '여우', '까마귀', '수달', '고슴도치', '너구리', '펭귄', '다람쥐'], ' ']
+  };
+  function randomName() {
+    const L = NAMES[(window.I18N && I18N.lang) || 'zh-TW'] || NAMES['zh-TW'];
+    const pick = function (a) { return a[Math.floor(Math.random() * a.length)]; };
+    return pick(L[0]) + L[2] + pick(L[1]);
+  }
 
   const Store = {
     settings: Object.assign({}, DEFAULT_SETTINGS, read(K.settings, {})),
@@ -62,11 +71,11 @@
     },
 
     /* 暱稱：沒有就用「形容詞＋小動物」 */
+    randomName: randomName,
     getName: function () {
       let n = read(K.name, '');
       if (!n) {
-        const en = window.I18N && I18N.lang === 'en';
-        n = en ? ADJ_EN[Math.floor(Math.random() * 8)] + ' ' + ANI_EN[Math.floor(Math.random() * 8)] : ADJ[Math.floor(Math.random() * 8)] + ANI[Math.floor(Math.random() * 8)];
+        n = randomName();
         write(K.name, n);
       }
       return n;
