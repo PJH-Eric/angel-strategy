@@ -19,7 +19,8 @@
   function svgRoot(w, h, label) {
     return s('svg', { viewBox: '0 0 ' + w + ' ' + h, class: 'figure', role: 'img', 'aria-label': label || '', preserveAspectRatio: 'xMidYMid meet', style: 'max-width:' + Math.max(w, 300) + 'px' });
   }
-  const T = function (lang) { return function (zh, en) { return lang === 'en' ? en : zh; }; };
+  const PH = window.AngelPhrase;
+  const T = function (lang) { return function (key, vars) { return PH.p(lang, key, vars); }; };
   const neg = function (x) { return String(x).replace(/-(\d)/g, '−$1'); };
   const CIRC = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
   const prettyOps = function (x) { return String(x).replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−'); };
@@ -48,12 +49,12 @@
     (function walk(n) { if (n.leaf) { n.x = leaves++; n.h = 0; return; } walk(n.l); walk(n.r); n.h = 1 + Math.max(n.l.h, n.r.h); n.x = (n.l.x + n.r.x) / 2; n.step = ++order; })(tree);
     const CW = 70, RH = 62, PADX = 34, TOP = 70;
     const W = Math.max(320, leaves * CW + PADX), H = tree.h * RH + TOP + 44 + order * 22 + 40;
-    const root = svgRoot(W, H, t('算式解法圖', 'Expression solution diagram'));
+    const root = svgRoot(W, H, t('fig.exprAlt'));
     const px = function (n) { return PADX / 2 + CW / 2 + n.x * CW + (W - leaves * CW - PADX) / 2; };
     const py = function (n) { return TOP + (tree.h - n.h) * RH; };
     const near = pz.type === 'near';
-    root.appendChild(tx(W / 2, 22, near ? t('目標 ' + pz.goal + '，盡量接近（最接近的差距：' + R.explainPuzzle(pz, lang).dist + '）', 'Goal ' + pz.goal + ' · closest possible gap: ' + R.explainPuzzle(pz, lang).dist) : t('目標 ' + pz.target, 'Target ' + pz.target), 'fg-title'));
-    root.appendChild(tx(W / 2, 42, t('每個數字恰好用一次；圓圈編號 = 運算先後順序', 'Each number once · circled = order of steps'), 'fg-sub'));
+    root.appendChild(tx(W / 2, 22, near ? t('fig.near', { g: pz.goal, d: R.explainPuzzle(pz, lang).dist }) : t('fig.target', { t: pz.target }), 'fg-title'));
+    root.appendChild(tx(W / 2, 42, t('fig.exprSub'), 'fg-sub'));
     (function lines(n) { if (n.leaf) return; [n.l, n.r].forEach(function (c) { root.appendChild(s('line', { x1: px(c), y1: py(c) - (c.leaf ? 16 : 18), x2: px(n), y2: py(n) + 18, class: 'fg-edge' })); lines(c); }); })(tree);
     (function nodes(n) {
       if (n.leaf) {
@@ -90,30 +91,30 @@
     return [];
   }
   function clueCheck(c, d, lang) {
-    const en = lang === 'en';
     switch (c.t) {
       case 'sum': return c.p.map(function (i) { return d[i]; }).join(' + ') + ' = ' + c.v;
       case 'gt': return d[c.a] + ' > ' + d[c.b];
-      case 'par': return d[c.i] + (en ? (c.even ? ' is even' : ' is odd') : (c.even ? ' 是偶數' : ' 是奇數'));
+      case 'par': return PH.p(lang, c.even ? 'chk.even' : 'chk.odd', { d: d[c.i] });
       case 'diff': return '|' + d[c.a] + ' − ' + d[c.b] + '| = ' + c.v;
       case 'big': return d[c.i] + (c.big ? ' ≥ 5' : ' ≤ 4');
-      case 'mul': return c.no ? d[c.i] + ' ÷ ' + c.k + (en ? ' has a remainder' : ' 有餘數') : d[c.i] + ' ÷ ' + c.k + ' = ' + (d[c.i] / c.k);
-      case 'has': return c.yes ? (en ? 'contains ' : '含有 ') + c.v : (en ? 'no ' : '沒有 ') + c.v + (en ? ' in code' : ' 出現');
+      case 'mul': return c.no ? PH.p(lang, 'chk.rem', { d: d[c.i], k: c.k }) : d[c.i] + ' ÷ ' + c.k + ' = ' + (d[c.i] / c.k);
+      case 'has': return PH.p(lang, c.yes ? 'chk.has' : 'chk.hasNot', { v: c.v });
     }
     return '';
   }
+
   function deduceFigure(pz, lang) {
     const t = T(lang);
     const n = pz.n, CW = 64, W = Math.max(340, n * CW + 20), x0 = (W - n * CW) / 2;
     const RH = 80, TOP = 104;
     const H = TOP + pz.clues.length * RH + 46;
-    const root = svgRoot(W, H, t('推理解法圖', 'Deduction solution diagram'));
+    const root = svgRoot(W, H, t('fig.dedAlt'));
     const cx = function (i) { return x0 + CW * i + CW / 2; };
-    root.appendChild(tx(W / 2, 20, t('每條線索都用答案驗證一次', 'Every clue is checked against the answer'), 'fg-title'));
+    root.appendChild(tx(W / 2, 20, t('fig.dedTitle'), 'fg-title'));
     for (let i = 0; i < n; i++) {
       root.appendChild(s('rect', { x: cx(i) - 22, y: 32, width: 44, height: 46, rx: 4, class: 'fg-slot' }));
       root.appendChild(tx(cx(i), 66, pz.solution[i], 'fg-bignum'));
-      root.appendChild(tx(cx(i), 94, t('第' + (i + 1) + '位', '#' + (i + 1)), 'fg-sub'));
+      root.appendChild(tx(cx(i), 94, t('fig.pos', { n: i + 1 }), 'fg-sub'));
       root.appendChild(s('line', { x1: cx(i), y1: 100, x2: cx(i), y2: H - 40, class: 'fg-col' }));
     }
     pz.clues.forEach(function (c, k) {
@@ -126,7 +127,7 @@
       root.appendChild(tx(30, y + 26, R.clueText(c, lang), 'fg-line', 'start'));
       root.appendChild(tx(30, y + 46, '→ ' + clueCheck(c, pz.solution, lang) + '  ✓', 'fg-ok', 'start'));
     });
-    root.appendChild(tx(W / 2, H - 14, t('唯一答案：', 'The only answer: ') + pz.solution.join(' '), 'fg-final-eq'));
+    root.appendChild(tx(W / 2, H - 14, t('fig.only') + pz.solution.join(' '), 'fg-final-eq'));
     return root;
   }
 
@@ -136,10 +137,10 @@
     const ex = R.explainPuzzle(pz, lang);
     const W = 380, RH = 30, rejected = ex.rejected.slice(0, 3);
     const H = 78 + (ex.rows.length + ex.tests.length) * RH + 40 + rejected.length * 38 + 30;
-    const root = svgRoot(W, H, t('找規則解法圖', 'Rule-finding solution diagram'));
-    root.appendChild(tx(W / 2, 20, t('規則：', 'Rule: ') + ex.rule, 'fg-title'));
+    const root = svgRoot(W, H, t('fig.ruleAlt'));
+    root.appendChild(tx(W / 2, 20, t('fig.rule') + ex.rule, 'fg-title'));
     const cols = [18, 120, 262];
-    [t('輸入', 'Input'), t('用規則計算', 'Apply the rule'), t('輸出', 'Output')].forEach(function (h, i) { root.appendChild(tx(cols[i], 48, h, 'fg-sub', 'start')); });
+    [t('fig.in'), t('fig.apply'), t('fig.out')].forEach(function (h, i) { root.appendChild(tx(cols[i], 48, h, 'fg-sub', 'start')); });
     root.appendChild(s('line', { x1: 10, y1: 54, x2: W - 10, y2: 54, class: 'fg-rule' }));
     let y = 78;
     ex.rows.forEach(function (r, i) {
@@ -149,7 +150,7 @@
       void i; y += RH;
     });
     root.appendChild(s('line', { x1: 10, y1: y - 16, x2: W - 10, y2: y - 16, class: 'fg-rule fg-dash' }));
-    root.appendChild(tx(10, y - 3, t('預測題', 'Predictions'), 'fg-sub', 'start')); y += 24;
+    root.appendChild(tx(10, y - 3, t('fig.pred'), 'fg-sub', 'start')); y += 24;
     ex.tests.forEach(function (r) {
       root.appendChild(s('rect', { x: 8, y: y - 19, width: W - 16, height: 26, rx: 3, class: 'fg-hl' }));
       root.appendChild(tx(cols[0], y, r.in.join(', '), 'fg-line', 'start'));
@@ -158,10 +159,10 @@
       y += RH;
     });
     y += 6;
-    root.appendChild(tx(10, y, t('為什麼不是別的規則？', 'Why not the other rules?'), 'fg-sub', 'start')); y += 18;
+    root.appendChild(tx(10, y, t('fig.whyNot'), 'fg-sub', 'start')); y += 18;
     rejected.forEach(function (r) {
       root.appendChild(tx(14, y, '✗ ' + r.rule, 'fg-bad', 'start'));
-      root.appendChild(tx(30, y + 17, t('例 ' + (r.example + 1) + ' 會得 ' + r.got + '，不是 ' + r.want, 'Example ' + (r.example + 1) + ' would give ' + r.got + ', not ' + r.want), 'fg-sub', 'start'));
+      root.appendChild(tx(30, y + 17, t('fig.wouldGive', { n: r.example + 1, g: r.got, w: r.want }), 'fg-sub', 'start'));
       y += 38;
     });
     return root;
@@ -176,9 +177,9 @@
     const W = 380, RH = 128, TOP = 30;
     const sol = !!opts.solution;
     const H = TOP + pz.scales.length * RH + (sol ? 56 : 8);
-    const root = svgRoot(W, H, t('天平配重圖', 'Balance diagram'));
+    const root = svgRoot(W, H, t('fig.scaleAlt'));
     const SH = R.SHAPES;
-    if (sol) root.appendChild(tx(W / 2, 18, t('每座天平左右兩邊的重量相等', 'Both sides of every scale weigh the same'), 'fg-title'));
+    if (sol) root.appendChild(tx(W / 2, 18, t('fig.scaleTitle'), 'fg-title'));
     pz.scales.forEach(function (sc, k) {
       const y0 = TOP + k * RH + 24, cx = W / 2;
       const items = function (counts, c0) {
@@ -232,8 +233,8 @@
     const chunk = function (arr, k) { const o = []; for (let i = 0; i < arr.length; i += k) o.push(arr.slice(i, i + k)); return o; };
     const lines = sol ? R.explainPuzzle(pz, lang).lines.reduce(function (a, ln) { return a + 1 + chunk(ln.items, 2).length; }, 0) : 0;
     const H = TOP + n * RH + 20 + lines * 20 + (sol ? 30 : 0);
-    const root = svgRoot(W, H, t('算式金字塔圖', 'Number pyramid diagram'));
-    root.appendChild(tx(W / 2, 20, t('頂端目標：', 'Top target: ') + neg(pz.target), 'fg-title'));
+    const root = svgRoot(W, H, t('fig.pyrAlt'));
+    root.appendChild(tx(W / 2, 20, t('fig.pyrTop') + neg(pz.target), 'fg-title'));
     // 逐層計算（運算子未選完的層以後都是 ?）
     const rows = [pz.bottom.slice()];
     let okTo = true;
@@ -267,7 +268,7 @@
         const y = pos(r + 1, 0).y;
         const g = s('g', { class: 'fg-oplevel' + (onLevel ? ' is-click' : ''), 'data-level': r });
         g.appendChild(s('rect', { x: 8, y: y - 16, width: 62, height: 32, rx: 4, class: 'fg-lvl' }));
-        g.appendChild(tx(39, y - 3, t('第' + (r + 1) + '層', 'L' + (r + 1)), 'fg-sub'));
+        g.appendChild(tx(39, y - 3, t('fig.lvShort', { n: r + 1 }), 'fg-sub'));
         g.appendChild(tx(39, y + 12, op ? prettyOps(op) : '?', 'fg-opch'));
         if (onLevel) { g.addEventListener('click', function () { onLevel(r); }); g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button'); g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onLevel(r); } }); }
         root.appendChild(g);
@@ -277,10 +278,10 @@
       const ex = R.explainPuzzle(pz, lang);
       let y = TOP + n * RH + 14;
       ex.lines.forEach(function (ln) {
-        root.appendChild(tx(12, y, t('第' + ln.level + '層（' + prettyOps(ln.op) + '）', 'Level ' + ln.level + ' (' + prettyOps(ln.op) + ')'), 'fg-sub', 'start')); y += 20;
+        root.appendChild(tx(12, y, t('fig.lvLong', { n: ln.level, op: prettyOps(ln.op) }), 'fg-sub', 'start')); y += 20;
         chunk(ln.items, 2).forEach(function (row) { root.appendChild(tx(26, y, neg(row.join('　　')), 'fg-line', 'start')); y += 20; });
       });
-      root.appendChild(tx(W / 2, y + 8, t('頂端 ', 'Top ') + neg(pz.target) + '  ✓', 'fg-final-eq'));
+      root.appendChild(tx(W / 2, y + 8, t('fig.top') + neg(pz.target) + '  ✓', 'fg-final-eq'));
     }
     return root;
   }

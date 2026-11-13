@@ -166,28 +166,18 @@
     return { pos: pos, digit: puzzle.solution[pos] };
   }
 
-  const POS_ZH = ['第一位', '第二位', '第三位', '第四位', '第五位'];
-  const POS_EN = ['1st', '2nd', '3rd', '4th', '5th'];
+  // 線索文字：多語片語在 phrases.js
+  const PH = (typeof module === 'object' && module.exports) ? require('./phrases.js') : self.AngelPhrase;
   function clueText(c, lang) {
-    const en = lang === 'en';
-    const P = function (i) { return en ? POS_EN[i] : POS_ZH[i]; };
+    const P = function (i) { return PH.p(lang, 'pos.' + (i + 1)); };
     switch (c.t) {
-      case 'sum':
-        return en ? 'Digits ' + c.p.map(P).join(' + ') + ' add up to ' + c.v
-                  : c.p.map(P).join('、') + '相加等於 ' + c.v;
-      case 'gt': return en ? 'The ' + P(c.a) + ' digit is greater than the ' + P(c.b)
-                           : P(c.a) + '比' + P(c.b) + '大';
-      case 'par': return en ? 'The ' + P(c.i) + ' digit is ' + (c.even ? 'even' : 'odd')
-                            : P(c.i) + '是' + (c.even ? '偶數' : '奇數');
-      case 'diff': return en ? 'The ' + P(c.a) + ' and ' + P(c.b) + ' digits differ by ' + c.v
-                             : P(c.a) + '與' + P(c.b) + '相差 ' + c.v;
-      case 'big': return en ? 'The ' + P(c.i) + ' digit is ' + (c.big ? '5 or more' : '4 or less')
-                            : P(c.i) + (c.big ? '至少是 5' : '不超過 4');
-      case 'mul':
-        return en ? 'The ' + P(c.i) + ' digit is ' + (c.no ? 'not ' : '') + 'a multiple of ' + c.k
-                  : P(c.i) + (c.no ? '不是 ' : '是 ') + c.k + ' 的倍數';
-      case 'has': return en ? 'The code ' + (c.yes ? 'contains' : 'does not contain') + ' the digit ' + c.v
-                            : '密碼' + (c.yes ? '含有' : '不含') + '數字 ' + c.v;
+      case 'sum': return PH.p(lang, 'clue.sum', { list: c.p.map(P).join(PH.p(lang, 'list.sep')), v: c.v });
+      case 'gt': return PH.p(lang, 'clue.gt', { a: P(c.a), b: P(c.b) });
+      case 'par': return PH.p(lang, c.even ? 'clue.even' : 'clue.odd', { a: P(c.i) });
+      case 'diff': return PH.p(lang, 'clue.diff', { a: P(c.a), b: P(c.b), v: c.v });
+      case 'big': return PH.p(lang, c.big ? 'clue.big' : 'clue.small', { a: P(c.i) });
+      case 'mul': return PH.p(lang, c.no ? 'clue.notMul' : 'clue.mul', { a: P(c.i), k: c.k });
+      case 'has': return PH.p(lang, c.yes ? 'clue.has' : 'clue.hasNot', { v: c.v });
     }
     return '';
   }
@@ -292,18 +282,10 @@
 
   // 數字博弈：說明本回合怎麼分出勝負
   function explainNumGame(params, result, lang) {
-    const en = lang === 'en';
     const info = result.info || {};
-    if (info.void) return en ? 'No valid winner this round: everyone collided or nobody picked.' : '本回合無人勝出：全員撞號或沒有人出數字。';
-    if (params.mode === 'avg') {
-      const f = Math.round(params.factor * 100) / 100;
-      return en
-        ? 'Average ' + info.mean + ' × ' + f + ' = target ' + info.target + '. The closest pick wins.'
-        : '平均數 ' + info.mean + ' × ' + f + ' = 目標 ' + info.target + '，最接近目標者勝。';
-    }
-    return params.mode === 'lowunique'
-      ? (en ? 'Among numbers picked by exactly one player, the lowest wins; duplicated numbers all lose.' : '只有一人選的數字才算數，其中最小者勝；撞號者全部墊底。')
-      : (en ? 'Among numbers picked by exactly one player, the highest wins; duplicated numbers all lose.' : '只有一人選的數字才算數，其中最大者勝；撞號者全部墊底。');
+    if (info.void) return PH.p(lang, 'num.void');
+    if (params.mode === 'avg') return PH.p(lang, 'num.avg', { m: info.mean, f: Math.round(params.factor * 100) / 100, t: info.target });
+    return PH.p(lang, params.mode === 'lowunique' ? 'num.low' : 'num.high');
   }
 
   function sameMultiset(a, b) {
@@ -363,7 +345,7 @@
       gen: function (rand, diff, tier) { return genDeduce(rand, diff, tier); },
       check: function (p, a) { return { ok: checkDeduce(p, a) }; },
       explain: function (p, lang) { return explainDeduce(p, lang); },
-      hint: function (p, n, lang) { const h = deduceHint(p, []); void n; return h ? (lang === 'en' ? 'Position ' : '第 ') + (h.pos + 1) + (lang === 'en' ? ' is ' : ' 位是 ') + h.digit : ''; }
+      hint: function (p, n, lang) { const h = deduceHint(p, []); void n; return h ? PH.p(lang, 'hint.deduce', { p: h.pos + 1, d: h.digit }) : ''; }
     },
     arith: {
       gen: function (rand, diff, tier) { return genArith(rand, diff, tier); },
@@ -384,13 +366,14 @@
   function levelKind(level) { return isBoss(level) ? 'boss' : KIND_CYCLE[(level - 1) % KIND_CYCLE.length]; }
   function tierOf(level) { return Math.floor((level - 1) / BOSS_EVERY); }
 
-  const TIME_BASE = { baby: null, easy: 150, normal: 120, hard: 100, myth: 80 };
+  // 每題秒數（幼幼不限時）：越後面的關卡稍微縮短，最多縮短 25%，最少 60 秒；魔王關三題 ×2.6
+  const TIME_BASE = { baby: null, easy: 240, normal: 210, hard: 180, myth: 150 };
   function timeLimitSec(diff, level) {
     const base = TIME_BASE[diff];
     if (base == null) return null;
-    const t = base - tierOf(level) * 6;
+    const t = base * (1 - Math.min(0.25, tierOf(level) * 0.015));
     const boss = isBoss(level) ? 2.6 : 1;
-    return Math.round(Math.max(30, t) * boss);
+    return Math.round(Math.max(60, t) * boss);
   }
   const HINTS = { baby: Infinity, easy: 3, normal: 2, hard: 1, myth: 0 };
   function hintLimit(diff) { return HINTS[diff]; }
@@ -412,11 +395,11 @@
 
   function starsFor(diff, level, usedSec, hints) {
     const limit = timeLimitSec(diff, level);
-    const cap = HINTS[diff];
     if (limit == null) return hints === 0 ? 3 : (hints <= 2 ? 2 : 1);
     const ratio = usedSec / limit;
-    if (hints === 0 && ratio <= 0.5) return 3;
-    if (hints <= (cap === Infinity ? 1 : 1) && ratio <= 0.8) return 2;
+    // 時限放寬後星等門檻同步收緊，三星難度維持不變
+    if (hints === 0 && ratio <= 0.35) return 3;
+    if (hints <= 1 && ratio <= 0.55) return 2;
     return 1;
   }
 

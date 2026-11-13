@@ -97,14 +97,17 @@ const CHECK = function () {
   const problems = []; const errors = []; let scenes = 0;
   if (shotsDir) fs.mkdirSync(shotsDir, { recursive: true });
   for (const v of (QUICK ? VIEWS.filter(function (x) { return ['phone-s', 'tablet-p', 'desktop'].indexOf(x[0]) !== -1; }) : VIEWS)) {
-    for (const lang of ['zh-TW', 'en']) {
+    for (const lang of (process.argv.indexOf('--all-langs') !== -1 ? ['zh-TW', 'zh-CN', 'en', 'ja', 'ko'] : ['zh-TW', 'en'])) {
       const ctx = await browser.newContext({ viewport: { width: v[1], height: v[2] }, hasTouch: v[3] });
-      await ctx.addInitScript('localStorage.setItem("as.progress.v1", JSON.stringify({baby:' + JSON.stringify(prog) + '}))');
+      // 幼幼與神話 1～12 關、困難第 10 關都算「已通關」，結算才看得到解法圖
+      await ctx.addInitScript('localStorage.setItem("as.progress.v1", JSON.stringify({baby:' + JSON.stringify(prog) + ',myth:' + JSON.stringify(prog) + ',hard:' + JSON.stringify(prog) + '}))');
       const pg = await ctx.newPage();
       pg.on('pageerror', function (e) { errors.push(v[0] + '/' + lang + ' pageerror ' + e.message); });
       pg.on('console', function (m) { if (m.type() === 'error') errors.push(v[0] + '/' + lang + ' console ' + m.text()); });
       await pg.goto(base); await pg.waitForSelector('.home');
       await pg.evaluate(function (l) { I18N.setLang(l); }, lang);
+      // 依目前語言找按鈕文字（五種語言都適用）
+      const clickT = async function (key) { const label = await pg.evaluate(function (k) { return I18N.t(k); }, key); await pg.locator('.btn', { hasText: label }).first().click(); };
       const scene = async function (name, fn) {
         await fn(); await pg.waitForTimeout(250); scenes++;
         const res = await pg.evaluate(CHECK);
@@ -127,18 +130,20 @@ const CHECK = function () {
       const kinds = ['deduce', 'arith', 'pyramid', 'rule', 'near', 'scale'];
       for (let lv = 1; lv <= 6; lv++) {
         await scene('play-' + kinds[lv - 1], async function () { await pg.evaluate(function (n) { App.go('play', { diff: 'baby', level: n }); }, lv); await pg.waitForSelector('.panel'); });
-        await scene('solution-' + kinds[lv - 1], async function () { await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
+        await scene('solution-' + kinds[lv - 1], async function () { await clickT('play.giveup'); await pg.waitForSelector('.overlay svg.figure'); });
       }
       // 神話難度：題目最大（5 位密碼、6 層金字塔、5 個圖形），檢查大題的版面與解法圖
       for (let lv = 1; lv <= 6; lv++) {
         await scene('myth-' + kinds[lv - 1], async function () { await pg.evaluate(function (n) { App.go('play', { diff: 'myth', level: n }); }, lv); await pg.waitForSelector('.panel'); });
-        await scene('myth-sol-' + kinds[lv - 1], async function () { await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
+        await scene('myth-sol-' + kinds[lv - 1], async function () { await clickT('play.giveup'); await pg.waitForSelector('.overlay svg.figure'); });
       }
       // 長結算：魔王關三題、隨機挑戰五題
-      await scene('boss-result', async function () { await pg.evaluate(function () { App.go('play', { diff: 'hard', level: 10 }); }); await pg.waitForSelector('.panel'); await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
+      await scene('boss-result', async function () { await pg.evaluate(function () { App.go('play', { diff: 'hard', level: 10 }); }); await pg.waitForSelector('.panel'); await clickT('play.giveup'); await pg.waitForSelector('.overlay svg.figure'); });
       await scene('share-dialog', async function () { await pg.click('.overlay .share-open'); await pg.waitForSelector('.share-img:not([hidden])', { timeout: 15000 }); });
       await pg.evaluate(function () { document.querySelectorAll('.overlay').forEach(function (o) { o.remove(); }); });
-      await scene('random-result', async function () { await pg.evaluate(function () { App.go('play', { mode: 'random', diff: 'myth', seed: 'audit2' }); }); await pg.waitForSelector('.panel'); await pg.click('text=' + (lang === 'en' ? 'Show Solution' : '看解法')); await pg.waitForSelector('.overlay svg.figure'); });
+      // 隨機挑戰沒過關：解法要鎖住（只顯示「通關後才能看解法」）
+      await scene('random-result', async function () { await pg.evaluate(function () { App.go('play', { mode: 'random', diff: 'myth', seed: 'audit2' }); }); await pg.waitForSelector('.panel'); await clickT('play.quit'); await pg.click('.overlay .btn.primary'); await pg.waitForSelector('.overlay .sol-locked'); });
+      if (await pg.evaluate(function () { return document.querySelectorAll('.overlay svg.figure').length; })) problems.push(v[0] + '/' + lang + '/random-result：沒過關卻顯示了解法圖');
       await scene('records', async function () { await pg.evaluate(function () { App.go('records', { tab: 'stats' }); }); });
       await scene('achievements', async function () { await pg.evaluate(function () { App.go('records', { tab: 'ach' }); }); });
       await scene('online-lobby', async function () { await pg.evaluate(function () { App.go('online', {}); }); await pg.waitForSelector('.room-card, text=' + (lang === 'en' ? 'New room' : '開新房間'), { timeout: 8000 }).catch(function () {}); });

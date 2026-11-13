@@ -58,7 +58,7 @@ t('隨機挑戰：同一種子結果相同、不同種子不同；5 題型別不
     a.forEach((p) => assert.ok(R.checkPuzzle(p, p.solution).ok));
   });
   assert.strictEqual(R.randomTimeLimitSec('baby'), null);
-  assert.strictEqual(R.randomTimeLimitSec('normal'), 120 * R.RANDOM_COUNT);
+  assert.strictEqual(R.randomTimeLimitSec('normal'), 210 * R.RANDOM_COUNT);
   const sigs = new Set(); for (let i = 0; i < 30; i++) sigs.add(JSON.stringify(R.randomPuzzles('s' + i, 'hard')));
   assert.strictEqual(sigs.size, 30, '30 個不同種子要出 30 組不同題目');
 });

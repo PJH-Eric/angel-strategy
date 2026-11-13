@@ -56,6 +56,7 @@
 
   function install(R) {
     const parseArith = R.parseArith;
+    const PH = (typeof module === 'object' && module.exports) ? require('./phrases.js') : self.AngelPhrase;
     const reg = R.registry;
 
     function sameMultiset(a, b) {
@@ -112,7 +113,7 @@
       hint: function (p, n, lang) {
         const r = parseArith(p.solution);
         const s = r.steps[Math.min(n, r.steps.length - 1)];
-        return (lang === 'en' ? 'A good step: ' : '好的一步：') + s;
+        return PH.p(lang, 'hint.step', { s: s });
       }
     };
 
@@ -163,7 +164,6 @@
       },
       explain: function (p, lang) {
         const truth = ruleById(p.secret.rule);
-        const en = lang === 'en';
         const work = function (rule, x) {
           switch (rule.id) {
             case 'sum': return x.join(' + ') + ' = ' + rule.f(x);
@@ -182,11 +182,11 @@
           if (c.id === truth.id) return;
           for (let i = 0; i < p.examples.length; i++) {
             const e = p.examples[i];
-            if (c.f(e.in) !== e.out) { rejected.push({ rule: en ? c.en : c.zh, example: i, got: c.f(e.in), want: e.out }); return; }
+            if (c.f(e.in) !== e.out) { rejected.push({ rule: PH.p(lang, 'rule.' + c.id), example: i, got: c.f(e.in), want: e.out }); return; }
           }
         });
         return {
-          rule: en ? truth.en : truth.zh,
+          rule: PH.p(lang, 'rule.' + truth.id),
           rows: p.examples.map(function (e) { return { in: e.in, out: e.out, work: work(truth, e.in) }; }),
           tests: p.tests.map(function (x, i) { return { in: x, out: p.solution[i], work: work(truth, x) }; }),
           rejected: rejected
@@ -194,10 +194,9 @@
       },
       hint: function (p, n, lang) {
         const truth = ruleById(p.secret.rule);
-        const en = lang === 'en';
-        if (n === 0) return en ? truth.he : truth.hz;
+        if (n === 0) return PH.p(lang, 'rhint.' + truth.id);
         const e = p.examples[0];
-        return (en ? 'Look at the first example: ' : '看第一個例子：') + e.in.join(', ') + ' → ' + e.out + (en ? '. The rule is: ' : '。規則是：') + (en ? truth.en : truth.zh);
+        return PH.p(lang, 'hint.rule', { ex: e.in.join(', ') + ' → ' + e.out, r: PH.p(lang, 'rule.' + truth.id) });
       }
     };
 
@@ -287,7 +286,7 @@
       },
       hint: function (p, n, lang) {
         const i = Math.min(n, p.m - 1);
-        return (lang === 'en' ? 'Shape ' : '圖形 ') + SHAPES[i] + (lang === 'en' ? ' weighs ' : ' 的重量是 ') + p.solution[i];
+        return PH.p(lang, 'hint.scale', { s: SHAPES[i], w: p.solution[i] });
       }
     };
 
@@ -351,7 +350,7 @@
       hint: function (p, n, lang) {
         const l = Math.min(n, p.n - 2);
         const names = { '+': '＋', '-': '−', '*': '×' };
-        return lang === 'en' ? 'Level ' + (l + 1) + ' (counting up from the bottom) uses ' + names[p.solution[l]] : '由下往上第 ' + (l + 1) + ' 層用 ' + names[p.solution[l]];
+        return PH.p(lang, 'hint.pyr', { l: l + 1, op: names[p.solution[l]] });
       }
     };
 

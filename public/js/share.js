@@ -8,7 +8,10 @@
   'use strict';
   const el = UI.el, t = function (k, v) { return I18N.t(k, v); };
   const C = { bg: '#0a0e11', panel: '#151c22', line: '#34434f', text: '#dbe4ea', dim: '#8396a4', amber: '#f2a81d', red: '#e0463d', green: '#3fbf90', cyan: '#5cb7cf' };
-  const FONT = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif';
+  // 依語言挑字型，日文／韓文／简体用各自的字型才不會缺字或字形不對
+  const FONTS = { ja: '"Noto Sans JP","Hiragino Sans","Yu Gothic UI",Meiryo,', ko: '"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",', 'zh-CN': '"Noto Sans SC","PingFang SC","Microsoft YaHei",' };
+  let FONT = '';
+  function pickFont() { FONT = (FONTS[I18N.lang] || '') + '"Noto Sans TC","PingFang TC","Microsoft JhengHei","Noto Sans CJK TC",system-ui,sans-serif'; }
 
   function cleanUrl() {
     const u = new URL(location.href);
@@ -58,6 +61,7 @@
   function fit(ctx, s, max) { while (ctx.measureText(s).width > max && s.length > 4) s = s.slice(0, -2) + '…'; return s; }
 
   async function render(o) {
+    pickFont();
     const W = 1080, P = 64, CW = W - P * 2;
     const figs = [];
     for (const f of (o.figures || []).slice(0, 2)) { try { figs.push(await svgToImage(f)); } catch (e) { /* 單張失敗就略過 */ } }

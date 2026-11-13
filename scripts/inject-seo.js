@@ -28,7 +28,7 @@ function headFor(cfg, gaId) {
   const jsonLd = {
     '@context': 'https://schema.org', '@type': 'WebApplication',
     name: cfg.title.split('｜')[0], alternateName: 'Angel Strategy', url: cfg.siteUrl, description: cfg.description,
-    applicationCategory: 'GameApplication', operatingSystem: 'Any', inLanguage: ['zh-Hant', 'en'],
+    applicationCategory: 'GameApplication', operatingSystem: 'Any', inLanguage: ['zh-Hant', 'zh-Hans', 'en', 'ja', 'ko'],
     genre: cfg.genre, numberOfPlayers: cfg.players, offers: { '@type': 'Offer', price: '0', priceCurrency: 'TWD' },
     image: cfg.ogImage || undefined, thumbnailUrl: cfg.ogImage || undefined,
     isPartOf: { '@type': 'WebSite', url: cfg.lobbyUrl }
@@ -43,6 +43,9 @@ function headFor(cfg, gaId) {
     '<meta property="og:type" content="website">',
     '<meta property="og:locale" content="zh_TW">',
     '<meta property="og:locale:alternate" content="en_US">',
+    '<meta property="og:locale:alternate" content="zh_CN">',
+    '<meta property="og:locale:alternate" content="ja_JP">',
+    '<meta property="og:locale:alternate" content="ko_KR">',
     '<meta property="og:site_name" content="遊戲小小島">',
     '<meta property="og:title" content="' + esc(cfg.title) + '">',
     '<meta property="og:description" content="' + esc(cfg.description) + '">',

@@ -27,7 +27,7 @@
     const langBtn = UI.button('', { cls: 'small ghost', aria: t('common.language'), onClick: function () {
       UI.menu(langBtn, I18N.LANGS.map(function (l) { return { id: l.id, label: l.label }; }), function (id) { I18N.setLang(id); }, I18N.lang);
     } });
-    langBtn.textContent = I18N.lang === 'en' ? 'EN' : '中文'; langBtn.insertBefore(Icon.el('globe'), langBtn.firstChild);
+    langBtn.textContent = ({ 'zh-TW': '繁中', 'zh-CN': '简中', en: 'EN', ja: '日本語', ko: '한국어' })[I18N.lang] || I18N.lang; langBtn.insertBefore(Icon.el('globe'), langBtn.firstChild);
     const setBtn = UI.button('', { cls: 'small ghost icon', icon: 'gear', aria: t('common.settings'), onClick: openSettings });
     // 語言按鈕緊鄰設定按鈕（右上角）
     const right = el('div', { class: 'row', style: 'gap:8px;flex-wrap:nowrap' }, [langBtn, setBtn]);
@@ -341,6 +341,9 @@
     const limit = daily ? R.dailyTimeLimitSec(diff) : (rnd ? R.randomTimeLimitSec(diff) : R.timeLimitSec(diff, p.level));
     const modeTitle = daily ? t('daily.title') : (rnd ? t('rand.title') : t('camp.level', { n: p.level }));
     const backTo = daily ? 'daily' : (rnd ? 'random' : 'campaign');
+    // 解法只在通關後才看得到（幼幼班不限）：這一關以前過過，或這一局過關
+    const clearedBefore = camp ? Store.stars(diff, p.level) > 0 : (daily ? Store.dailyBest(p.date, diff) != null : false);
+    const canPeek = diff === 'baby' || clearedBefore;
     const hintCap = R.hintLimit(diff);
     const S = { idx: 0, hints: 0, ph: 0, tries: 0, elapsed: 0, last: performance.now(), paused: false, ended: false, hintMsgs: [], widget: null, wstate: null, pTries: 0, pStart: 0, pHints: 0, fresh: [] };
     const gaKey = 'solo:' + Date.now();
@@ -409,7 +412,10 @@
         cls: 'ghost small', icon: 'hint', title: hintCap === 0 ? t('play.hintNone') : null, disabled: hintCap === 0 || left <= 0, onClick: useHint
       });
       actions.appendChild(hb);
-      actions.appendChild(UI.button(t('play.giveup'), { cls: 'ghost small', icon: 'flagWhite', onClick: function () { finish('gaveup'); } }));
+      actions.appendChild(UI.button(canPeek ? t('play.giveup') : t('play.quit'), { cls: 'ghost small', icon: 'flagWhite', onClick: function () {
+        if (canPeek) { finish('gaveup'); return; }
+        UI.confirm(t('play.quitAsk'), function () { finish('gaveup'); });
+      } }));
       actions.appendChild(UI.button(t('play.exit'), { cls: 'ghost small danger', icon: 'exit', onClick: function () {
         S.paused = true;
         const m = UI.confirm(t('play.leaveAsk'), function () { exit(); });
@@ -467,6 +473,7 @@
       if (rnd) Store.addRandomRun(diff, win ? usedSec : null);
       S.fresh = S.fresh.concat(Store.track({ t: 'finish', mode: daily ? 'daily' : (rnd ? 'random' : 'campaign'), diff: diff, level: p.level, win: win, why: why, sec: usedSec, hints: S.hints, boss: camp && R.isBoss(p.level), date: p.date, kinds: puzzles.map(function (z) { return z.type; }) }));
       Audio2.sfx(win ? 'win' : 'lose'); Audio2.vibrate(win ? [40, 40, 40] : 200);
+      const showSol = win || canPeek;
       const body2 = [
         el('h3', { class: 'result-title ' + (win ? 'win' : 'lose'), text: win ? t('res.clear') : (why === 'timeup' ? t('res.timeup') : t('res.gaveup')) }),
         el('div', { class: 'row' }, [
@@ -480,13 +487,14 @@
             title: modeTitle, sub: t('diff.' + diff), win: win,
             result: win ? t('res.clear') : (why === 'timeup' ? t('res.timeup') : t('res.gaveup')),
             stats: [[t('play.time'), usedSec.toFixed(2) + 's'], [t('play.hints'), String(S.hints)], [t('play.tries'), String(S.tries)]].concat(win && camp ? [[t('ach.stars'), UI.stars(stars)]] : []),
-            figures: puzzles.slice(0, 2).map(function (z) { return Figure.solution(z, I18N.lang); }),
+            figures: showSol ? puzzles.slice(0, 2).map(function (z) { return Figure.solution(z, I18N.lang); }) : [],
             figLabels: puzzles.slice(0, 2).map(function (z, i) { return (puzzles.length > 1 ? t('res.puzzleN', { n: i + 1 }) + '　' : '') + t('kind.' + z.type) + '　' + t('res.solution'); }),
             badges: S.fresh.map(function (id) { const a = Records.byId(id); return { name: t('ach.' + id), tier: a ? a.tier : 'bronze' }; })
           });
         } })
       ];
-      puzzles.forEach(function (pz, i) { body2.push(Puzzle.solutionView(pz, puzzles.length > 1 ? t('res.puzzleN', { n: i + 1 }) : '')); });
+      if (showSol) puzzles.forEach(function (pz, i) { body2.push(Puzzle.solutionView(pz, puzzles.length > 1 ? t('res.puzzleN', { n: i + 1 }) : '')); });
+      else body2.push(el('div', { class: 'sol sol-locked' }, [Icon.el('lock'), el('div', null, [el('b', { text: t('res.solLocked') }), el('p', { class: 'muted', text: t('res.solLockedSub') })])]));
       const foot = [];
       foot.push(UI.button(rnd ? t('rand.again') : t('common.again'), { cls: 'primary', icon: rnd ? 'dice' : 'retry', onClick: function () { m.close(); go('play', rnd ? { mode: 'random', diff: diff, seed: newSeed() } : p); } }));
       if (win && camp && p.level < R.LEVELS_PER_DIFF) foot.push(UI.button(t('common.next'), { cls: 'primary', icon: 'play', onClick: function () { m.close(); go('play', { mode: 'campaign', diff: diff, level: p.level + 1 }); } }));
