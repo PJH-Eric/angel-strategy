@@ -180,7 +180,7 @@ body { touch-action: manipulation; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field input { font: inherit; color: var(--text); background: #0b1014; border: 2px solid var(--line); padding: 10px 12px; min-height: 44px; width: 100%; border-radius: 0; -webkit-appearance: none; appearance: none; }
 .field input:focus { border-color: var(--cyan); }
-.menu-pop { position: absolute; z-index: 700; min-width: 140px; background: var(--panel); border: 1px solid var(--amber); display: flex; flex-direction: column; max-height: 50vh; overflow: auto; scrollbar-width: none; }
+.menu-pop { position: absolute; z-index: 860; min-width: 140px; background: var(--panel); border: 1px solid var(--amber); display: flex; flex-direction: column; max-height: 50vh; overflow: auto; scrollbar-width: none; }
 .menu-pop::-webkit-scrollbar { display: none; }
 .menu-pop button { all: unset; box-sizing: border-box; padding: 11px 14px; cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 .menu-pop button:hover, .menu-pop button:focus-visible, .menu-pop button[aria-selected="true"] { background: var(--steel2); color: var(--amber); }
