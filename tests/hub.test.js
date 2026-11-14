@@ -244,7 +244,7 @@ t('斷線寬限：期限內重連保留席位；逾時才離開並可能關房',
   hub.shutdown();
 });
 
-t('大廳聊天室：歷史、過濾、重複阻擋、頻率限制、開房公告', async function () {
+t('大廳聊天室：新連線空白、即時訊息、過濾、頻率限制與開房公告', async function () {
   let clock = 5000000;
   const hub = createHub({ now: function () { return clock; } });
   const a = mk(hub, 'pidChat001', 'A'), b = mk(hub, 'pidChat002', 'B');
@@ -269,8 +269,16 @@ t('大廳聊天室：歷史、過濾、重複阻擋、頻率限制、開房公�
   assert.ok(sys && sys.msg.room.name === '公告房');
   const late = mk(hub, 'pidChat003', 'L');
   late.say({ t: 'lobbychat', op: 'join' });
-  assert.ok(late.last('lobbychat').op === 'online' || late.all('lobbychat').some(function (x) { return x.op === 'history' && x.msgs.length >= 2; }));
+  const fresh = late.all('lobbychat').find(function (x) { return x.op === 'history'; });
+  assert.deepStrictEqual(fresh.msgs, [], '新連線不會收到先前的聊天訊息');
+  assert.strictEqual(late.last('lobbychat').n, 2, '新連線仍收到目前在線人數');
   b.say({ t: 'lobbychat', op: 'leave' });
+  assert.strictEqual(late.last('lobbychat').n, 1, '離開大廳後在線人數減少');
+  b.say({ t: 'lobbychat', op: 'join' });
+  assert.deepStrictEqual(b.all('lobbychat').filter(function (x) { return x.op === 'history'; }).pop().msgs, [], '重連後仍從空白開始');
+  assert.strictEqual(b.last('lobbychat').n, 2, '重新加入後在線人數回升');
+  b.drop();
+  assert.strictEqual(late.last('lobbychat').n, 1, '斷線後在線人數減少');
   hub.shutdown();
 });
 
