@@ -20,7 +20,11 @@ const VIEWS = [
 // --quick 只跑代表性的三種螢幕（開發時用）；預設跑全部
 const QUICK = process.argv.indexOf('--quick') !== -1;
 const shotsDir = process.argv.indexOf('--shots') !== -1 ? process.argv[process.argv.indexOf('--shots') + 1] : null;
-const exe = ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].filter(fs.existsSync)[0];
+const exe = process.env.CHROME_PATH || [
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+  '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'
+].filter(function (p) { return fs.existsSync(p); })[0];
 
 const CHECK = function () {
   const vw = window.innerWidth, vh = window.innerHeight, out = [];
@@ -92,15 +96,16 @@ const CHECK = function () {
 (async function main() {
   await new Promise(function (r) { server.listen(0, '127.0.0.1', r); });
   const base = 'http://127.0.0.1:' + server.address().port + '/index.html';
-  const browser = await chromium.launch(exe ? { executablePath: exe, args: ['--no-sandbox'] } : { args: ['--no-sandbox'] });
   const prog = {}; for (let i = 1; i <= 12; i++) prog[i] = 3;
   const problems = []; const errors = []; let scenes = 0;
   if (shotsDir) fs.mkdirSync(shotsDir, { recursive: true });
   for (const v of (QUICK ? VIEWS.filter(function (x) { return ['phone-s', 'tablet-p', 'desktop'].indexOf(x[0]) !== -1; }) : VIEWS)) {
     for (const lang of (process.argv.indexOf('--all-langs') !== -1 ? ['zh-TW', 'zh-CN', 'en', 'ja', 'ko'] : ['zh-TW', 'en'])) {
+      console.log('巡檢 ' + v[0] + '/' + lang);
+      const browser = await chromium.launch(exe ? { executablePath: exe, args: ['--no-sandbox'] } : { args: ['--no-sandbox'] });
       const ctx = await browser.newContext({ viewport: { width: v[1], height: v[2] }, hasTouch: v[3] });
       // 幼幼與神話 1～12 關、困難第 10 關都算「已通關」，結算才看得到解法圖
-      await ctx.addInitScript('localStorage.setItem("as.progress.v1", JSON.stringify({baby:' + JSON.stringify(prog) + ',myth:' + JSON.stringify(prog) + ',hard:' + JSON.stringify(prog) + '}))');
+      await ctx.addInitScript('Object.defineProperty(window, "GAME_SERVER_URL", { configurable: true, get: function () { return location.origin; }, set: function () {} }); localStorage.setItem("as.progress.v1", JSON.stringify({baby:' + JSON.stringify(prog) + ',myth:' + JSON.stringify(prog) + ',hard:' + JSON.stringify(prog) + '}))');
       await ctx.addInitScript('window.__noCountdown = true');   // 其餘場景略過 3‧2‧1，倒數另有專屬場景
       const pg = await ctx.newPage();
       pg.on('pageerror', function (e) { errors.push(v[0] + '/' + lang + ' pageerror ' + e.message); });
@@ -154,11 +159,45 @@ const CHECK = function () {
       if (await pg.evaluate(function () { return document.querySelectorAll('.overlay svg.figure').length; })) problems.push(v[0] + '/' + lang + '/random-result：沒過關卻顯示了解法圖');
       await scene('records', async function () { await pg.evaluate(function () { App.go('records', { tab: 'stats' }); }); });
       await scene('achievements', async function () { await pg.evaluate(function () { App.go('records', { tab: 'ach' }); }); });
-      await scene('online-lobby', async function () { await pg.evaluate(function () { App.go('online', {}); }); await pg.waitForSelector('.room-card, text=' + (lang === 'en' ? 'New room' : '開新房間'), { timeout: 8000 }).catch(function () {}); });
+      await scene('online-lobby', async function () {
+        await pg.evaluate(function () { App.go('online', {}); });
+        await pg.waitForSelector('.lobby-top .btn.primary', { timeout: 8000 });
+        const chatClose = pg.locator('.lc-panel header button[aria-label]').last();
+        if (await chatClose.isVisible()) await chatClose.click();
+      });
+      await scene('online-create-room', async function () {
+        await clickT('on.create');
+        await pg.waitForSelector('.dialog');
+        const fmtBtn = pg.locator('.dialog .set-row .btn').first();
+        for (const format of ['chips', 'elimination', 'points']) {
+          await fmtBtn.click();
+          await pg.waitForSelector('.menu-pop [role="option"]');
+          const z = await pg.evaluate(function () {
+            return {
+              menu: Number(getComputedStyle(document.querySelector('.menu-pop')).zIndex),
+              overlay: Number(getComputedStyle(document.querySelector('.overlay.top')).zIndex)
+            };
+          });
+          if (z.menu <= z.overlay) problems.push(v[0] + '/' + lang + '/online-create-room：賽制選單被彈窗遮住 ' + JSON.stringify(z));
+          const label = await pg.evaluate(function (f) { return I18N.t('room.fmt.' + f); }, format);
+          const option = pg.locator('.menu-pop [role="option"]').filter({ hasText: label }).first();
+          const hit = await option.evaluate(function (el) {
+            const r = el.getBoundingClientRect();
+            const target = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return target === el || el.contains(target);
+          });
+          if (!hit) problems.push(v[0] + '/' + lang + '/online-create-room：賽制選項無法點擊「' + label + '」');
+          await option.click();
+          const selected = await fmtBtn.textContent();
+          if (!selected.includes(label)) problems.push(v[0] + '/' + lang + '/online-create-room：賽制選擇未生效「' + label + '」');
+        }
+      });
+      await pg.locator('.dialog footer .btn.ghost').click();
+      await pg.waitForSelector('.dialog', { state: 'detached' });
       await ctx.close();
+      await browser.close();
     }
   }
-  await browser.close();
   server.close();
   console.log('巡檢 ' + scenes + ' 個畫面');
   errors.concat(problems).slice(0, 60).forEach(function (m) { console.log('  ✗ ' + m); });
