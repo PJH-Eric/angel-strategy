@@ -164,7 +164,7 @@
       if (S.dead) return;
       if (!AS_CONFIG.configured) { S.conn = 'noserver'; S.view = 'status'; render(); return; }
       S.conn = 'connecting'; if (S.view !== 'room' && S.view !== 'match') { S.view = 'status'; render(); }
-      try { ws = new WebSocket(AS_CONFIG.wsUrl + '/ws'); } catch (e) { scheduleRetry(); return; }
+      try { ws = window.GameBackend?.createSocket(AS_CONFIG.wsUrl + '/ws') ?? new WebSocket(AS_CONFIG.wsUrl + '/ws'); } catch (e) { scheduleRetry(); return; }
       ws.onopen = function () { S.retry = 0; showNet(false); send({ t: 'hello', pid: pid, name: S.name }); };
       ws.onmessage = function (ev) { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } handle(m); };
       ws.onclose = function () { if (S.dead) return; S.conn = 'closed'; showNet(true); if (chat) chat.setDisabled(t('chat.connecting')); scheduleRetry(); };
@@ -400,7 +400,10 @@
         return UI.button(t('room.level.' + lv), { cls: 'small' + (lv === cur ? ' is-on' : ''), onClick: function () { send({ t: 'room:settings', level: lv }); } });
       }))]);
     }
-    function inviteUrl(tok, role) { return location.origin + location.pathname + '?room=' + S.room.id + '&inv=' + encodeURIComponent(tok) + '&role=' + role; }
+    function inviteUrl(tok, role) {
+      const address = location.origin + location.pathname + '?room=' + S.room.id + '&inv=' + encodeURIComponent(tok) + '&role=' + role;
+      return window.GameBackend?.pinInvite(address) ?? address;
+    }
     function copy(text) {
       const done = function () { UI.toast(t('common.copied')); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { UI.toast(text); });
