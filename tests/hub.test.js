@@ -291,6 +291,17 @@ t('玩家改暱稱會經過消毒；超長暱稱被截斷', async function () {
   hub.shutdown();
 });
 
+t('應用層心跳：ping 回 pong，未 hello 也能回，不影響其他狀態', async function () {
+  const hub = createHub();
+  const a = mk(hub, 'pidBeat0001', 'A');
+  a.say({ t: 'ping' });
+  assert.strictEqual(a.all('pong').length, 1);
+  const raw = { readyState: 1, got: [], send: function (x) { this.got.push(x); }, close: function () {} };
+  hub.connect(raw); hub.onMessage(raw, JSON.stringify({ t: 'ping' }));
+  assert.deepStrictEqual(raw.got, ['{"t":"pong"}']);
+  hub.shutdown();
+});
+
 (async function run() {
   for (const q of queue) {
     try { await q.fn(); passed++; console.log('  ok  ' + q.name); }

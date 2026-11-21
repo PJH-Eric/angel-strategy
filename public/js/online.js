@@ -125,7 +125,7 @@
       lobbyMsgs: [], lobbyOnline: null, roomMsgs: [], match: null, offset: 0, picked: false, solved: false, done: [],
       invite: params && params.invite ? params.invite : null, inviteBad: false, leftMatch: false, dead: false, retry: 0
     };
-    let ws = null, retryT = null, stableT = null, tick = null, widget = null, chat = null, finalDlg = null, M = null;
+    let ws = null, retryT = null, stableT = null, beatT = null, lastRx = 0, beatOk = false, tick = null, widget = null, chat = null, finalDlg = null, M = null;
     const pid = Store.getPid();
 
     ctx.setTitle(t('on.title'));
@@ -143,7 +143,7 @@
     function onOnline() { if (S.dead) return; S.retry = 0; clearTimeout(retryT); if (ws) { try { ws.onclose = null; ws.close(); } catch (e) { /* ignore */ } ws = null; } connect(); }
     window.addEventListener('offline', onOffline); window.addEventListener('online', onOnline);
     function shutdown() {
-      S.dead = true; clearTimeout(retryT); clearTimeout(stableT); clearInterval(tick);
+      S.dead = true; clearTimeout(retryT); clearTimeout(stableT); clearInterval(beatT); clearInterval(tick);
       window.removeEventListener('offline', onOffline); window.removeEventListener('online', onOnline); netBanner.remove();
       document.removeEventListener('as:prefs', onPrefs);
       cleanupView();
@@ -165,10 +165,19 @@
       if (!AS_CONFIG.configured) { S.conn = 'noserver'; S.view = 'status'; render(); return; }
       S.conn = 'connecting'; if (S.view !== 'room' && S.view !== 'match') { S.view = 'status'; render(); }
       try { ws = window.GameBackend?.createSocket(AS_CONFIG.wsUrl + '/ws') ?? new WebSocket(AS_CONFIG.wsUrl + '/ws'); } catch (e) { scheduleRetry(); return; }
-      ws.onopen = function () { showNet(false); send({ t: 'hello', pid: pid, name: S.name }); };
-      ws.onmessage = function (ev) { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } handle(m); };
-      ws.onclose = function () { if (S.dead) return; clearTimeout(stableT); S.conn = 'closed'; showNet(true); if (chat) chat.setDisabled(t('chat.connecting')); scheduleRetry(); };
+      ws.onopen = function () { lastRx = Date.now(); beatOk = false; startBeat(ws); showNet(false); send({ t: 'hello', pid: pid, name: S.name }); };
+      ws.onmessage = function (ev) { lastRx = Date.now(); let m; try { m = JSON.parse(ev.data); } catch (e) { return; } handle(m); };
+      ws.onclose = function () { clearInterval(beatT); if (S.dead) return; clearTimeout(stableT); S.conn = 'closed'; showNet(true); if (chat) chat.setDisabled(t('chat.connecting')); scheduleRetry(); };
       ws.onerror = function () { /* onclose 會處理 */ };
+    }
+    // 應用層心跳：每 20 秒送 ping，讓閒置的大廳連線持續有流量；伺服器支援心跳（回過 pong）後，超過 50 秒沒收到任何訊息就視為斷線主動重連；舊版伺服器不回 pong 則不啟用
+    function startBeat(sock) {
+      clearInterval(beatT);
+      beatT = setInterval(function () {
+        if (S.dead || ws !== sock || sock.readyState !== 1) return;
+        if (beatOk && Date.now() - lastRx > 50000) { try { sock.close(); } catch (e) { /* ignore */ } return; }
+        try { sock.send('{"t":"ping"}'); } catch (e) { /* ignore */ }
+      }, 20000);
     }
     function scheduleRetry() {
       if (S.dead) return;
@@ -187,6 +196,7 @@
           if (S.room) break;                                   // 重連：等伺服器回傳房間快照
           if (S.invite) { S.view = 'invite'; render(); } else { S.view = 'lobby'; render(); send({ t: 'lobbychat', op: 'join' }); }
           break;
+        case 'pong': beatOk = true; break;
         case 'lobby': S.rooms = m.rooms; if (S.view === 'lobby') drawRooms(); break;
         case 'lobbychat':
           if (m.op === 'history') { S.lobbyMsgs = m.msgs; if (chat && S.view === 'lobby') chat.refresh(); }
