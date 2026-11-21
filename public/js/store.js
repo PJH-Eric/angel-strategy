@@ -3,6 +3,7 @@
   'use strict';
   const K = { settings: 'as.settings.v1', progress: 'as.progress.v1', daily: 'as.daily.v1', name: 'as.name.v1', chatOpen: 'as.chatopen.v1', pid: 'as.pid.v1', random: 'as.random.v1', records: 'as.records.v1' };
   const DEFAULT_SETTINGS = { bgm: true, sfx: true, bgmVol: 0.5, sfxVol: 0.8, vibrate: true, reduce: false, lobbyChat: true };
+  let pid, pidReady;
   function read(k, fb) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch (e) { return fb; } }
   function write(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* ignore */ } }
 
@@ -84,10 +85,16 @@
     getChatOpen: function () { return read(K.chatOpen, true); },
     setChatOpen: function (v) { write(K.chatOpen, !!v); },
     getPid: function () {
-      let p = null;
-      try { p = sessionStorage.getItem(K.pid); } catch (e) { /* ignore */ }
-      if (!p) p = newPid();
-      return p;
+      if (pid) return pid;
+      let saved;
+      try { saved = sessionStorage.getItem(K.pid); } catch (e) { /* ignore */ }
+      pid = /^[A-Za-z0-9_-]{6,40}$/.test(saved || '') ? saved : newPid();
+      return pid;
+    },
+    preparePid: function () {
+      if (!navigator.locks || !navigator.locks.request) return Promise.resolve(Store.getPid());
+      if (!pidReady) pidReady = new Promise(claimPid);
+      return pidReady;
     }
   };
   function newPid() {
@@ -95,17 +102,17 @@
     try { sessionStorage.setItem(K.pid, p); } catch (e) { /* ignore */ }
     return p;
   }
-  // 複製分頁會連 sessionStorage 一起複製，兩個分頁共用同一個 pid 會被伺服器互踢、無限重連。
-  // 每個存活的分頁用 Web Locks 佔住自己的 pid；已被其他分頁佔用就換一個新的。
-  function claimPid() {
-    if (!navigator.locks || !navigator.locks.request) return;
-    let p; try { p = sessionStorage.getItem(K.pid); } catch (e) { return; }
-    if (!p) return;
+  // 首次連線前確認玩家 ID 未被其他分頁占用，並在分頁存活期間持有鎖。
+  function claimPid(resolve) {
+    const p = Store.getPid();
     navigator.locks.request('as-pid-' + p, { ifAvailable: true }, function (lock) {
-      if (lock) return new Promise(function () { /* 分頁存活期間一直持有 */ });
-      newPid(); claimPid();
-    }).catch(function () { /* ignore */ });
+      if (lock) {
+        resolve(p);
+        return new Promise(function () { /* 分頁關閉時瀏覽器會釋放鎖 */ });
+      }
+      pid = newPid();
+      claimPid(resolve);
+    }).catch(function () { resolve(p); });
   }
-  claimPid();
   window.Store = Store;
 })();

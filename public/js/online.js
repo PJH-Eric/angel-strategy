@@ -121,12 +121,12 @@
   /* ---------- 畫面 ---------- */
   App.screens.online = function (ctx, params) {
     const S = {
-      conn: 'connecting', view: 'connecting', name: Store.getName(), rooms: [], room: null, role: null,
+      conn: 'connecting', view: 'status', name: Store.getName(), rooms: [], room: null, role: null,
       lobbyMsgs: [], lobbyOnline: null, roomMsgs: [], match: null, offset: 0, picked: false, solved: false, done: [],
       invite: params && params.invite ? params.invite : null, inviteBad: false, leftMatch: false, dead: false, retry: 0
     };
-    let ws = null, retryT = null, stableT = null, beatT = null, lastRx = 0, beatOk = false, openAt = 0, lastClose = '', tick = null, widget = null, chat = null, finalDlg = null, M = null;
-    const pid = Store.getPid();
+    let ws = null, retryT = null, handshakeT = null, stableT = null, beatT = null, lastRx = 0, beatOk = false, lastClose = '', tick = null, widget = null, chat = null, finalDlg = null, M = null;
+    let pid;
 
     ctx.setTitle(t('on.title'));
     ctx.setBack(leaveToHome);
@@ -140,14 +140,28 @@
     netBanner.hidden = true; document.body.appendChild(netBanner);
     function showNet(v) { netBanner.hidden = !v || (S.view !== 'room' && S.view !== 'match'); }
     function onOffline() { showNet(true); }
-    function onOnline() { if (S.dead) return; S.retry = 0; clearTimeout(retryT); if (ws) { try { ws.onclose = null; ws.close(); } catch (e) { /* ignore */ } ws = null; } connect(); }
+    function onOnline() {
+      if (S.dead) return;
+      S.retry = 0;
+      closeSocket();
+      connect();
+    }
     window.addEventListener('offline', onOffline); window.addEventListener('online', onOnline);
+    function closeSocket() {
+      clearTimeout(retryT);
+      clearTimeout(handshakeT);
+      clearTimeout(stableT);
+      clearInterval(beatT);
+      const sock = ws;
+      ws = null;
+      if (sock) { try { sock.close(); } catch (e) { /* ignore */ } }
+    }
     function shutdown() {
-      S.dead = true; clearTimeout(retryT); clearTimeout(stableT); clearInterval(beatT); clearInterval(tick);
+      S.dead = true;
+      closeSocket();
       window.removeEventListener('offline', onOffline); window.removeEventListener('online', onOnline); netBanner.remove();
       document.removeEventListener('as:prefs', onPrefs);
       cleanupView();
-      if (ws) { try { ws.onclose = null; ws.close(); } catch (e) { /* ignore */ } ws = null; }
     }
     function leaveToHome() {
       if (S.room) send({ t: 'room:leave' });
@@ -161,19 +175,48 @@
       if (ws && ws.readyState === 1) ws.send(JSON.stringify(o));
     }
     function connect() {
-      if (S.dead) return;
+      if (S.dead || ws) return;
       if (!AS_CONFIG.configured) { S.conn = 'noserver'; S.view = 'status'; render(); return; }
+      if (!pid) return;
+      clearTimeout(retryT);
       S.conn = 'connecting'; if (S.view !== 'room' && S.view !== 'match') { S.view = 'status'; render(); }
-      try { ws = window.GameBackend?.createSocket(AS_CONFIG.wsUrl + '/ws') ?? new WebSocket(AS_CONFIG.wsUrl + '/ws'); } catch (e) { scheduleRetry(); return; }
-      ws.onopen = function () { openAt = Date.now(); lastRx = Date.now(); beatOk = false; startBeat(ws); showNet(false); send({ t: 'hello', pid: pid, name: S.name }); };
-      ws.onmessage = function (ev) { lastRx = Date.now(); let m; try { m = JSON.parse(ev.data); } catch (e) { return; } handle(m); };
-      ws.onclose = function (ev) {
-        clearInterval(beatT); if (S.dead) return;
+      let sock;
+      try { sock = window.GameBackend?.createSocket(AS_CONFIG.wsUrl + '/ws') ?? new WebSocket(AS_CONFIG.wsUrl + '/ws'); } catch (e) { scheduleRetry(); return; }
+      ws = sock;
+      handshakeT = setTimeout(function () {
+        closeSocket();
+        scheduleRetry();
+      }, 60000);   // 容許免費主機冷啟動，並回收一直未收到 hello 的連線
+      let openAt = 0;
+      sock.onopen = function () {
+        if (ws !== sock) return;
+        openAt = lastRx = Date.now();
+        beatOk = false;
+        startBeat(sock);
+        showNet(false);
+        send({ t: 'hello', pid: pid, name: S.name });
+      };
+      sock.onmessage = function (ev) {
+        if (ws !== sock) return;
+        lastRx = Date.now();
+        let m;
+        try { m = JSON.parse(ev.data); } catch (e) { return; }
+        handle(m);
+      };
+      sock.onclose = function (ev) {
+        if (ws !== sock) return;
+        ws = null;
+        clearInterval(beatT);
+        clearTimeout(handshakeT);
+        clearTimeout(stableT);
         // 診斷：斷線代碼、這條連線撐了幾秒、連到哪個後端（顯示在「連線中」畫面，方便回報）
-        let host = ''; try { host = new URL(this.url || '').host; } catch (e) { /* ignore */ }
+        let host = ''; try { host = new URL(sock.url || '').host; } catch (e) { /* ignore */ }
         lastClose = 'close ' + (ev && ev.code != null ? ev.code : '?') + ' · ' + (openAt ? Math.round((Date.now() - openAt) / 1000) + 's' : 'never opened') + ' · ' + host;
-        openAt = 0; try { console.warn('[angel-strategy] ' + lastClose); } catch (e) { /* ignore */ } clearTimeout(stableT); S.conn = 'closed'; showNet(true); if (chat) chat.setDisabled(t('chat.connecting')); scheduleRetry(); };
-      ws.onerror = function () { /* onclose 會處理 */ };
+        console.warn('[angel-strategy] ' + lastClose);
+        showNet(true);
+        if (chat) chat.setDisabled(t('chat.connecting'));
+        scheduleRetry();
+      };
     }
     // 應用層心跳：每 20 秒送 ping，讓閒置的大廳連線持續有流量；伺服器支援心跳（回過 pong）後，超過 50 秒沒收到任何訊息就視為斷線主動重連；舊版伺服器不回 pong 則不啟用
     function startBeat(sock) {
@@ -196,6 +239,7 @@
     function handle(m) {
       switch (m.t) {
         case 'hello':
+          clearTimeout(handshakeT);
           S.conn = 'open'; S.name = m.name;
           clearTimeout(stableT); stableT = setTimeout(function () { S.retry = 0; }, 10000);   // 連上後穩定 10 秒才重設退避，避免「連上就被斷」變成每秒重連
           if (S.room) break;                                   // 重連：等伺服器回傳房間快照
@@ -310,7 +354,7 @@
       page([el('div', { class: 'panel stack center' }, [
         el('p', { text: noSrv ? t('on.noServer') : (S.conn === 'closed' ? t('on.offline') : t('on.connecting')) }),
         !noSrv && lastClose ? el('p', { style: 'font-size:.75em;opacity:.6;word-break:break-all', text: lastClose }) : null,
-        noSrv ? null : UI.button(t('on.retry'), { cls: 'primary', onClick: function () { S.retry = 0; clearTimeout(retryT); connect(); } })
+        noSrv ? null : UI.button(t('on.retry'), { cls: 'primary', disabled: S.conn !== 'closed', onClick: function () { S.retry = 0; connect(); } })
       ])]);
     }
 
@@ -773,6 +817,14 @@
       finalDlg = dlg;
     }
 
-    connect();
+    if (AS_CONFIG.configured) {
+      render();
+      Store.preparePid().then(function (id) {
+        pid = id;
+        connect();
+      });
+    } else {
+      connect();
+    }
   };
 })();

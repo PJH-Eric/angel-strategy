@@ -9,6 +9,7 @@
  */
 const path = require('path');
 const fs = require('fs');
+const assert = require('node:assert/strict');
 let chromium;
 try { chromium = require('playwright').chromium; } catch (e) { console.log('略過：沒有安裝 playwright'); process.exit(0); }
 const { server } = require('../server.js');
@@ -25,6 +26,73 @@ const exe = process.env.CHROME_PATH || [
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
   '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'
 ].filter(function (p) { return fs.existsSync(p); })[0];
+
+async function checkLobbyConnection(base) {
+  const browser = await chromium.launch(exe ? { executablePath: exe, args: ['--no-sandbox'] } : { args: ['--no-sandbox'] });
+  try {
+    const ctx = await browser.newContext();
+    await ctx.addInitScript(function () {
+      window.testSockets = [];
+      const NativeSocket = window.WebSocket;
+      window.WebSocket = class extends NativeSocket {
+        constructor(url) {
+          super(url);
+          window.testSockets.push(this);
+        }
+        send(data) {
+          if (location.search !== '?pauseHello') super.send(data);
+        }
+      };
+    });
+    const first = await ctx.newPage();
+    const lobby = '.lobby-top .btn.primary';
+    await first.goto(base);
+    await first.evaluate(function () { App.go('online', {}); });
+    await first.waitForSelector(lobby);
+    const pid = await first.evaluate(function () { return Store.getPid(); });
+
+    const opened = first.waitForEvent('popup');
+    await first.evaluate(function () { window.open(location.href); });
+    const second = await opened;
+    await second.waitForSelector('.home');
+    assert.equal(await second.evaluate(function () { return sessionStorage.getItem('as.pid.v1'); }), pid);
+    await second.evaluate(function () { App.go('online', {}); });
+    await second.waitForSelector(lobby);
+    assert.notEqual(await second.evaluate(function () { return Store.getPid(); }), pid, '複製分頁須在發送 hello 前取得不同的玩家 ID');
+    assert.deepEqual(await first.evaluate(function () { return window.testSockets.map(function (s) { return s.readyState; }); }), [1]);
+
+    await first.evaluate(function () { window.testSockets[0].close(); });
+    await first.waitForFunction(function () { return window.testSockets.length === 2 && window.testSockets[1].readyState === 1; });
+    await first.waitForSelector(lobby);
+    assert.equal(await first.evaluate(function () { return Store.getPid(); }), pid);
+    await first.reload();
+    await first.evaluate(function () { App.go('online', {}); });
+    await first.waitForSelector(lobby);
+    assert.equal(await first.evaluate(function () { return Store.getPid(); }), pid, '重新整理後應沿用原本的玩家 ID');
+
+    const retry = await ctx.newPage();
+    await retry.clock.install();
+    await retry.goto(base + '?pauseHello');
+    await retry.evaluate(function () { App.go('online', {}); });
+    await retry.waitForFunction(function () { return window.testSockets[0]?.readyState === 1; });
+    await retry.evaluate(function () {
+      const button = document.querySelector('.panel.center .btn.primary');
+      button?.click();
+      document.querySelector('.panel.center .btn.primary')?.click();
+    });
+    assert.equal(await retry.evaluate(function () { return window.testSockets.length; }), 1, '連線中重按不能建立另一條 WebSocket');
+    await retry.clock.fastForward(60000);
+    await retry.waitForFunction(function () { return window.testSockets[0].readyState === 3; });
+    await retry.locator('.panel.center .btn.primary:enabled').waitFor();
+    await retry.evaluate(function () { App.go('home'); });
+    await retry.clock.fastForward(10000);
+    await retry.waitForFunction(function () { return window.testSockets.every(function (s) { return s.readyState === 3; }); });
+    assert.equal(await retry.evaluate(function () { return window.testSockets.length; }), 1, '離開大廳後應取消待執行的重連');
+    console.log('線上大廳連線巡檢通過');
+  } finally {
+    await browser.close();
+  }
+}
 
 const CHECK = function () {
   const vw = window.innerWidth, vh = window.innerHeight, out = [];
@@ -96,6 +164,8 @@ const CHECK = function () {
 (async function main() {
   await new Promise(function (r) { server.listen(0, '127.0.0.1', r); });
   const base = 'http://127.0.0.1:' + server.address().port + '/index.html';
+  await checkLobbyConnection(base);
+  if (process.argv.includes('--online-only')) process.exit(0);
   const prog = {}; for (let i = 1; i <= 12; i++) prog[i] = 3;
   const problems = []; const errors = []; let scenes = 0;
   if (shotsDir) fs.mkdirSync(shotsDir, { recursive: true });
