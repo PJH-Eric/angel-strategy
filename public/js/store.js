@@ -86,12 +86,26 @@
     getPid: function () {
       let p = null;
       try { p = sessionStorage.getItem(K.pid); } catch (e) { /* ignore */ }
-      if (!p) {
-        p = 'p' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
-        try { sessionStorage.setItem(K.pid, p); } catch (e) { /* ignore */ }
-      }
+      if (!p) p = newPid();
       return p;
     }
   };
+  function newPid() {
+    const p = 'p' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+    try { sessionStorage.setItem(K.pid, p); } catch (e) { /* ignore */ }
+    return p;
+  }
+  // 複製分頁會連 sessionStorage 一起複製，兩個分頁共用同一個 pid 會被伺服器互踢、無限重連。
+  // 每個存活的分頁用 Web Locks 佔住自己的 pid；已被其他分頁佔用就換一個新的。
+  function claimPid() {
+    if (!navigator.locks || !navigator.locks.request) return;
+    let p; try { p = sessionStorage.getItem(K.pid); } catch (e) { return; }
+    if (!p) return;
+    navigator.locks.request('as-pid-' + p, { ifAvailable: true }, function (lock) {
+      if (lock) return new Promise(function () { /* 分頁存活期間一直持有 */ });
+      newPid(); claimPid();
+    }).catch(function () { /* ignore */ });
+  }
+  claimPid();
   window.Store = Store;
 })();

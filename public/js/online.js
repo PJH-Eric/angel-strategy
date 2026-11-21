@@ -125,7 +125,7 @@
       lobbyMsgs: [], lobbyOnline: null, roomMsgs: [], match: null, offset: 0, picked: false, solved: false, done: [],
       invite: params && params.invite ? params.invite : null, inviteBad: false, leftMatch: false, dead: false, retry: 0
     };
-    let ws = null, retryT = null, tick = null, widget = null, chat = null, finalDlg = null, M = null;
+    let ws = null, retryT = null, stableT = null, tick = null, widget = null, chat = null, finalDlg = null, M = null;
     const pid = Store.getPid();
 
     ctx.setTitle(t('on.title'));
@@ -143,7 +143,7 @@
     function onOnline() { if (S.dead) return; S.retry = 0; clearTimeout(retryT); if (ws) { try { ws.onclose = null; ws.close(); } catch (e) { /* ignore */ } ws = null; } connect(); }
     window.addEventListener('offline', onOffline); window.addEventListener('online', onOnline);
     function shutdown() {
-      S.dead = true; clearTimeout(retryT); clearInterval(tick);
+      S.dead = true; clearTimeout(retryT); clearTimeout(stableT); clearInterval(tick);
       window.removeEventListener('offline', onOffline); window.removeEventListener('online', onOnline); netBanner.remove();
       document.removeEventListener('as:prefs', onPrefs);
       cleanupView();
@@ -165,9 +165,9 @@
       if (!AS_CONFIG.configured) { S.conn = 'noserver'; S.view = 'status'; render(); return; }
       S.conn = 'connecting'; if (S.view !== 'room' && S.view !== 'match') { S.view = 'status'; render(); }
       try { ws = window.GameBackend?.createSocket(AS_CONFIG.wsUrl + '/ws') ?? new WebSocket(AS_CONFIG.wsUrl + '/ws'); } catch (e) { scheduleRetry(); return; }
-      ws.onopen = function () { S.retry = 0; showNet(false); send({ t: 'hello', pid: pid, name: S.name }); };
+      ws.onopen = function () { showNet(false); send({ t: 'hello', pid: pid, name: S.name }); };
       ws.onmessage = function (ev) { let m; try { m = JSON.parse(ev.data); } catch (e) { return; } handle(m); };
-      ws.onclose = function () { if (S.dead) return; S.conn = 'closed'; showNet(true); if (chat) chat.setDisabled(t('chat.connecting')); scheduleRetry(); };
+      ws.onclose = function () { if (S.dead) return; clearTimeout(stableT); S.conn = 'closed'; showNet(true); if (chat) chat.setDisabled(t('chat.connecting')); scheduleRetry(); };
       ws.onerror = function () { /* onclose 會處理 */ };
     }
     function scheduleRetry() {
@@ -183,6 +183,7 @@
       switch (m.t) {
         case 'hello':
           S.conn = 'open'; S.name = m.name;
+          clearTimeout(stableT); stableT = setTimeout(function () { S.retry = 0; }, 10000);   // 連上後穩定 10 秒才重設退避，避免「連上就被斷」變成每秒重連
           if (S.room) break;                                   // 重連：等伺服器回傳房間快照
           if (S.invite) { S.view = 'invite'; render(); } else { S.view = 'lobby'; render(); send({ t: 'lobbychat', op: 'join' }); }
           break;
