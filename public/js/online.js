@@ -125,7 +125,7 @@
       lobbyMsgs: [], lobbyOnline: null, roomMsgs: [], match: null, offset: 0, picked: false, solved: false, done: [],
       invite: params && params.invite ? params.invite : null, inviteBad: false, leftMatch: false, dead: false, retry: 0
     };
-    let ws = null, retryT = null, stableT = null, beatT = null, lastRx = 0, beatOk = false, tick = null, widget = null, chat = null, finalDlg = null, M = null;
+    let ws = null, retryT = null, stableT = null, beatT = null, lastRx = 0, beatOk = false, openAt = 0, lastClose = '', tick = null, widget = null, chat = null, finalDlg = null, M = null;
     const pid = Store.getPid();
 
     ctx.setTitle(t('on.title'));
@@ -165,9 +165,14 @@
       if (!AS_CONFIG.configured) { S.conn = 'noserver'; S.view = 'status'; render(); return; }
       S.conn = 'connecting'; if (S.view !== 'room' && S.view !== 'match') { S.view = 'status'; render(); }
       try { ws = window.GameBackend?.createSocket(AS_CONFIG.wsUrl + '/ws') ?? new WebSocket(AS_CONFIG.wsUrl + '/ws'); } catch (e) { scheduleRetry(); return; }
-      ws.onopen = function () { lastRx = Date.now(); beatOk = false; startBeat(ws); showNet(false); send({ t: 'hello', pid: pid, name: S.name }); };
+      ws.onopen = function () { openAt = Date.now(); lastRx = Date.now(); beatOk = false; startBeat(ws); showNet(false); send({ t: 'hello', pid: pid, name: S.name }); };
       ws.onmessage = function (ev) { lastRx = Date.now(); let m; try { m = JSON.parse(ev.data); } catch (e) { return; } handle(m); };
-      ws.onclose = function () { clearInterval(beatT); if (S.dead) return; clearTimeout(stableT); S.conn = 'closed'; showNet(true); if (chat) chat.setDisabled(t('chat.connecting')); scheduleRetry(); };
+      ws.onclose = function (ev) {
+        clearInterval(beatT); if (S.dead) return;
+        // 診斷：斷線代碼、這條連線撐了幾秒、連到哪個後端（顯示在「連線中」畫面，方便回報）
+        let host = ''; try { host = new URL(this.url || '').host; } catch (e) { /* ignore */ }
+        lastClose = 'close ' + (ev && ev.code != null ? ev.code : '?') + ' · ' + (openAt ? Math.round((Date.now() - openAt) / 1000) + 's' : 'never opened') + ' · ' + host;
+        openAt = 0; try { console.warn('[angel-strategy] ' + lastClose); } catch (e) { /* ignore */ } clearTimeout(stableT); S.conn = 'closed'; showNet(true); if (chat) chat.setDisabled(t('chat.connecting')); scheduleRetry(); };
       ws.onerror = function () { /* onclose 會處理 */ };
     }
     // 應用層心跳：每 20 秒送 ping，讓閒置的大廳連線持續有流量；伺服器支援心跳（回過 pong）後，超過 50 秒沒收到任何訊息就視為斷線主動重連；舊版伺服器不回 pong 則不啟用
@@ -304,6 +309,7 @@
       const noSrv = S.conn === 'noserver';
       page([el('div', { class: 'panel stack center' }, [
         el('p', { text: noSrv ? t('on.noServer') : (S.conn === 'closed' ? t('on.offline') : t('on.connecting')) }),
+        !noSrv && lastClose ? el('p', { style: 'font-size:.75em;opacity:.6;word-break:break-all', text: lastClose }) : null,
         noSrv ? null : UI.button(t('on.retry'), { cls: 'primary', onClick: function () { S.retry = 0; clearTimeout(retryT); connect(); } })
       ])]);
     }
