@@ -617,3 +617,5 @@ body.reduce-motion .cd-n.pop { animation: none; }
 .outage-panel h2 { margin: 0 0 10px; font-size: clamp(18px, 4.6vw, 24px); letter-spacing: .08em; color: var(--amber); }
 .outage-panel p { margin: 0 0 18px; line-height: 1.7; }
 .outage-panel .btn { min-width: 128px; min-height: 46px; max-width: 100%; }
+.outage-panel a { color: var(--amber); font-weight: 900; text-decoration: underline; text-underline-offset: 3px; }
+.outage-panel a:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }

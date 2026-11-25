@@ -15,7 +15,7 @@ function setup() {
       remove() { this.parent.children = this.parent.children.filter(x => x !== this); this.isConnected = false; },
       focus() {}, querySelector(t) { return this.children.find(c => c.tag === t) || null; } };
   }
-  const document = { activeElement: null, body: el('body'), createElement: el, addEventListener() {}, removeEventListener() {} };
+  const document = { activeElement: null, body: el('body'), createElement: el, createTextNode: (x) => Object.assign(el('#text'), { textContent: x }), addEventListener() {}, removeEventListener() {} };
   const window = { I18N: { t: (k) => ({ 'outage.title': '目前伺服器過載休息中', 'outage.body': '歡迎贊助升級', 'outage.ok': '知道了' })[k] } };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../public/js/outage.js'), 'utf8'), {
     window, document,
@@ -33,8 +33,12 @@ assert.equal(s.body.children.length, 0, '未滿 30 秒不提示');
 s.tick(2000);
 assert.equal(s.body.children.length, 1, '連續 30 秒連不上就提示');
 const panel = s.body.children[0].children[0];
+const msg = panel.children[1];
+const link = msg.children.find(c => c.tag === 'a');
+assert.equal(link.href, 'https://portaly.cc/pjh-eric/support', '贊助連結');
+assert.equal(link.textContent, '贊助');
+assert.equal(msg.children.map(c => c.textContent).join(''), '歡迎贊助升級');
 assert.equal(panel.children[0].textContent, '目前伺服器過載休息中');
-assert.equal(panel.children[1].textContent, '歡迎贊助升級');
 s.api.state('closed'); s.tick(60000);
 assert.equal(s.body.children.length, 1, '同一次故障只提示一次');
 s.api.state('open');

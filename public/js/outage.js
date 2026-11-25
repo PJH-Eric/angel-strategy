@@ -5,6 +5,22 @@
   var timer = null, active = false, shown = false, mask = null, previousFocus = null;
   var eligible = false, attempted = false;
 
+  var SPONSOR_URL = 'https://portaly.cc/pjh-eric/support';
+  var SPONSOR_WORD = { 'zh-TW': '贊助', 'zh-CN': '赞助', en: 'Sponsorships', ja: 'ご支援', ko: '후원' };
+
+  function fillMessage(el, text) {
+    var lang = (w.I18N && w.I18N.lang) || 'zh-TW';
+    var word = SPONSOR_WORD[lang] || SPONSOR_WORD['zh-TW'];
+    var at = text.indexOf(word);
+    if (at < 0) { el.textContent = text; return; }
+    var link = document.createElement('a');
+    link.href = SPONSOR_URL;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = word;
+    el.append(document.createTextNode(text.slice(0, at)), link, document.createTextNode(text.slice(at + word.length)));
+  }
+
   function T(key, fallback) { return (w.I18N && w.I18N.t) ? w.I18N.t(key) : fallback; }
 
   function close() {
@@ -16,7 +32,7 @@
   }
   function onKey(e) {
     if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); close(); }
-    else if (e.key === 'Tab') { e.preventDefault(); mask.querySelector('button').focus(); }
+    else if (e.key === 'Tab') { e.preventDefault(); var link = mask.querySelector('a'), btn = mask.querySelector('button'); (link && document.activeElement === btn ? link : btn).focus(); }
   }
   function show() {
     if (shown || !active || !eligible) return;
@@ -35,7 +51,7 @@
     title.textContent = T('outage.title', '目前伺服器過載休息中');
     var message = document.createElement('p');
     message.id = 'outage-message';
-    message.textContent = T('outage.body', '歡迎贊助升級');
+    fillMessage(message, T('outage.body', '歡迎贊助升級'));
     var button = document.createElement('button');
     button.type = 'button';
     button.className = 'btn primary';
