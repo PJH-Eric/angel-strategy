@@ -125,7 +125,7 @@
       lobbyMsgs: [], lobbyOnline: null, roomMsgs: [], match: null, offset: 0, picked: false, solved: false, done: [],
       invite: params && params.invite ? params.invite : null, inviteBad: false, leftMatch: false, dead: false, retry: 0
     };
-    let ws = null, retryT = null, handshakeT = null, stableT = null, beatT = null, lastRx = 0, beatOk = false, lastClose = '', tick = null, widget = null, chat = null, finalDlg = null, M = null;
+    let ws = null, retryT = null, handshakeT = null, stableT = null, beatT = null, lastRx = 0, beatOk = false, tick = null, widget = null, chat = null, finalDlg = null, M = null;
     let pid;
 
     ctx.setTitle(t('on.title'));
@@ -157,7 +157,7 @@
       if (sock) { try { sock.close(); } catch (e) { /* ignore */ } }
     }
     function shutdown() {
-      S.dead = true;
+      S.dead = true; if (window.AngelOutage) { window.AngelOutage.state('idle'); window.AngelOutage.setScreen(''); }
       closeSocket();
       window.removeEventListener('offline', onOffline); window.removeEventListener('online', onOnline); netBanner.remove();
       document.removeEventListener('as:prefs', onPrefs);
@@ -179,7 +179,7 @@
       if (!AS_CONFIG.configured) { S.conn = 'noserver'; S.view = 'status'; render(); return; }
       if (!pid) return;
       clearTimeout(retryT);
-      S.conn = 'connecting'; if (S.view !== 'room' && S.view !== 'match') { S.view = 'status'; render(); }
+      S.conn = 'connecting'; if (window.AngelOutage) window.AngelOutage.state('connecting'); if (S.view !== 'room' && S.view !== 'match') { S.view = 'status'; render(); }
       let sock;
       try { sock = window.GameBackend?.createSocket(AS_CONFIG.wsUrl + '/ws') ?? new WebSocket(AS_CONFIG.wsUrl + '/ws'); } catch (e) { scheduleRetry(); return; }
       ws = sock;
@@ -209,10 +209,6 @@
         clearInterval(beatT);
         clearTimeout(handshakeT);
         clearTimeout(stableT);
-        // 診斷：斷線代碼、這條連線撐了幾秒、連到哪個後端（顯示在「連線中」畫面，方便回報）
-        let host = ''; try { host = new URL(sock.url || '').host; } catch (e) { /* ignore */ }
-        lastClose = 'close ' + (ev && ev.code != null ? ev.code : '?') + ' · ' + (openAt ? Math.round((Date.now() - openAt) / 1000) + 's' : 'never opened') + ' · ' + host;
-        console.warn('[angel-strategy] ' + lastClose);
         showNet(true);
         if (chat) chat.setDisabled(t('chat.connecting'));
         scheduleRetry();
@@ -229,7 +225,7 @@
     }
     function scheduleRetry() {
       if (S.dead) return;
-      S.conn = 'closed';
+      S.conn = 'closed'; if (window.AngelOutage) window.AngelOutage.state('closed');
       if (S.view === 'status') render();
       clearTimeout(retryT);
       retryT = setTimeout(connect, Math.min(8000, 1000 * Math.pow(2, S.retry++)));
@@ -240,7 +236,7 @@
       switch (m.t) {
         case 'hello':
           clearTimeout(handshakeT);
-          S.conn = 'open'; S.name = m.name;
+          S.conn = 'open'; S.name = m.name; if (window.AngelOutage) window.AngelOutage.state('open');
           clearTimeout(stableT); stableT = setTimeout(function () { S.retry = 0; }, 10000);   // 連上後穩定 10 秒才重設退避，避免「連上就被斷」變成每秒重連
           if (S.room) break;                                   // 重連：等伺服器回傳房間快照
           if (S.invite) { S.view = 'invite'; render(); } else { S.view = 'lobby'; render(); send({ t: 'lobbychat', op: 'join' }); }
@@ -339,6 +335,7 @@
     /* ----- 渲染 ----- */
     function render() {
       cleanupView();
+      if (window.AngelOutage) window.AngelOutage.setScreen(S.view);
       ctx.screen.textContent = '';
       ctx.setTitle(t('on.title'));
       if (S.view === 'status') return renderStatus();
@@ -353,7 +350,6 @@
       const noSrv = S.conn === 'noserver';
       page([el('div', { class: 'panel stack center' }, [
         el('p', { text: noSrv ? t('on.noServer') : (S.conn === 'closed' ? t('on.offline') : t('on.connecting')) }),
-        !noSrv && lastClose ? el('p', { style: 'font-size:.75em;opacity:.6;word-break:break-all', text: lastClose }) : null,
         noSrv ? null : UI.button(t('on.retry'), { cls: 'primary', disabled: S.conn !== 'closed', onClick: function () { S.retry = 0; connect(); } })
       ])]);
     }

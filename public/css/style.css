@@ -610,3 +610,10 @@ html:lang(ja) body, html:lang(ko) body { word-break: keep-all; overflow-wrap: an
 .cd-sub { font-size: .95em; color: var(--text, #dfe8ee); opacity: .85; }
 @keyframes cdpop { 0% { transform: scale(1.8); opacity: 0; } 40% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 body.reduce-motion .cd-n.pop { animation: none; }
+
+/* ---------- 伺服器暫停提示 ---------- */
+.outage-mask { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; padding: calc(var(--gutter) + var(--safe-t)) calc(var(--gutter) + var(--safe-r)) calc(var(--gutter) + var(--safe-b)) calc(var(--gutter) + var(--safe-l)); background: rgba(0, 0, 0, .7); }
+.outage-panel { width: min(100%, 440px); padding: clamp(18px, 4vw, 28px); text-align: center; overflow-wrap: anywhere; background: var(--panel); border: 1px solid var(--amber); clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px); }
+.outage-panel h2 { margin: 0 0 10px; font-size: clamp(18px, 4.6vw, 24px); letter-spacing: .08em; color: var(--amber); }
+.outage-panel p { margin: 0 0 18px; line-height: 1.7; }
+.outage-panel .btn { min-width: 128px; min-height: 46px; max-width: 100%; }
