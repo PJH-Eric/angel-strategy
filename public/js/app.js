@@ -30,7 +30,15 @@
     langBtn.textContent = ({ 'zh-TW': '繁中', 'zh-CN': '简中', en: 'EN', ja: '日本語', ko: '한국어' })[I18N.lang] || I18N.lang; langBtn.insertBefore(Icon.el('globe'), langBtn.firstChild);
     const setBtn = UI.button('', { cls: 'small ghost icon', icon: 'gear', aria: t('common.settings'), onClick: openSettings });
     // 語言按鈕緊鄰設定按鈕（右上角）
-    const right = el('div', { class: 'row', style: 'gap:8px;flex-wrap:nowrap' }, [langBtn, setBtn]);
+    const support = name === 'home' ? el('a', { class: 'btn small ghost home-support', href: 'https://portaly.cc/pjh-eric/support', target: '_blank', rel: 'noopener noreferrer' }, [
+      el('span', { 'aria-hidden': 'true', text: '♥' }),
+      el('span', { class: 'support-label', lang: 'zh-Hant', text: '贊助' }),
+      el('span', { class: 'support-label', lang: 'zh-Hans', text: '赞助' }),
+      el('span', { class: 'support-label', lang: 'en', text: 'Sponsor' }),
+      el('span', { class: 'support-label', lang: 'ja', text: '支援' }),
+      el('span', { class: 'support-label', lang: 'ko', text: '후원' }),
+    ]) : null;
+    const right = el('div', { class: 'row', style: 'gap:8px;flex-wrap:nowrap' }, [support, langBtn, setBtn]);
     const bar = el('div', { class: 'topbar' }, [left, title, right]);
     const screen = el('div', { class: 'screen' });
     root.appendChild(bar); root.appendChild(screen);
